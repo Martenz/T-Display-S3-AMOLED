@@ -20,6 +20,7 @@ static lv_point_t line_points[] = {
 
 static void update_text_subscriber_cb(lv_event_t *e);
 static void update_rotation_buss_cb(lv_event_t *e);
+static void update_background_color_cb(lv_event_t *e);
 
 static void timer_task(lv_timer_t *t);
 static lv_obj_t *dis;
@@ -79,6 +80,11 @@ void ui_toolbar_status(lv_obj_t* parent)
     lv_label_set_recolor(ble_text,true);
     lv_label_set_text_fmt(ble_text, "#4f0a4f %s#",LV_SYMBOL_BLUETOOTH);
     lv_obj_set_style_text_color(ble_text, UI_FONT_COLOR, 0);
+    lv_obj_add_event_cb(ble_text,
+                    update_text_subscriber_cb,
+                    LV_EVENT_MSG_RECEIVED,
+                    NULL);
+    lv_msg_subsribe_obj(MSG_NEW_BLE, ble_text, (void *)"%s");
 
     lv_obj_t *wifi_text = lv_label_create(parent);
     lv_obj_set_size(wifi_text, elev_png.header.w, 50);
@@ -88,6 +94,11 @@ void ui_toolbar_status(lv_obj_t* parent)
     lv_label_set_recolor(wifi_text,true);
     lv_label_set_text_fmt(wifi_text, "#4f0a4f %s#",LV_SYMBOL_WIFI);
     lv_obj_set_style_text_color(wifi_text, UI_FONT_COLOR, 0);
+    lv_obj_add_event_cb(wifi_text,
+                    update_text_subscriber_cb,
+                    LV_EVENT_MSG_RECEIVED,
+                    NULL);
+    lv_msg_subsribe_obj(MSG_NEW_WIFI, wifi_text, (void *)"%s");
 
     lv_obj_t *audio_text = lv_label_create(parent);
     lv_obj_set_size(audio_text, elev_png.header.w, 50);
@@ -203,7 +214,7 @@ void ui_begin()
     ui_toolbar_status(tv2);
 
     /* page 3 */
-    // Variometer [ TODO ...]
+    // Variometer
     lv_obj_t *main_p3 = lv_obj_create(tv3);
     lv_obj_set_size(main_p3, LV_PCT(100), LV_PCT(100));
     lv_obj_clear_flag(main_p3, LV_OBJ_FLAG_SCROLLABLE);
@@ -235,6 +246,11 @@ void ui_begin()
     lv_obj_align(dm_cout, LV_ALIGN_RIGHT_MID, 10, 0);
     lv_obj_set_style_bg_color(dm_cout, UI_DM_COLOR, 0);
     lv_obj_clear_flag(dm_cout, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(dm_cout,
+                        update_background_color_cb,
+                        LV_EVENT_MSG_RECEIVED,
+                        NULL);
+    lv_msg_subsribe_obj(MSG_NEW_BG_COLOR, dm_cout, (void*)"%i");
 
     // lv_obj_t *dm_point = lv_obj_create(p3_data);
     // lv_obj_set_size(dm_point, 25, 25);
@@ -388,6 +404,13 @@ static void update_rotation_buss_cb(lv_event_t *e)
     const int16_t *v = (const int16_t *)lv_msg_get_payload(m);
 
     lv_img_set_angle(obj, *v);
-
 }
 
+static void update_background_color_cb(lv_event_t *e)
+{
+    lv_obj_t *obj = lv_event_get_target(e);
+    lv_msg_t *m = lv_event_get_msg(e);
+    const int *v = (const int *)lv_msg_get_payload(m);
+    const lv_color_t c = lv_color_hex(*v);
+    lv_obj_set_style_bg_color(obj, c, 0);
+}

@@ -146,6 +146,19 @@ void setup()
         }
     );
 
+    button2.attachDuringLongPress(
+        [](){
+            wifi_on = !wifi_on;
+            if (wifi_on){
+                static char* wfon = "#ff00ff \xEF\x87\xAB#";
+                lv_msg_send(MSG_NEW_WIFI, &wfon);
+            }else{
+                static char* wfon = "#4f0a4f \xEF\x87\xAB#";
+                lv_msg_send(MSG_NEW_WIFI, &wfon);
+            }
+        }
+    );
+
     button1.attachClick(
        [](){ 
             vol_idx = (vol_idx+1)%3;
@@ -183,10 +196,9 @@ void loop()
     }
 
     if (last_tick > 10000){
-        wifi_on = true;
-//        lv_msg_send(MSG_NEW_WIFI, &wifi_on);
         ble_on = true;
-//        lv_msg_send(MSG_NEW_BLE, &ble_on);
+        static char* blon = "#ff00ff \xEF\x8a\x93#";
+        lv_msg_send(MSG_NEW_BLE, &blon);
     }
 
     if (millis() - last_tick_b > 500){
@@ -257,9 +269,13 @@ void vario_task(void *param)
         if (vario_dcm>=0){
             static char* pv = "#d5ff03 \xEF\x81\xA7#";
             lv_msg_send(MSG_NEW_VARIO_PM, &pv);
+            static int pbg = 0x5d750c;
+            lv_msg_send(MSG_NEW_BG_COLOR, &pbg);
         }else{
             static char* mv = "#ff1900 \xEF\x81\xA8#";
             lv_msg_send(MSG_NEW_VARIO_PM, &mv);
+            static int mbg = 0xb51919;
+            lv_msg_send(MSG_NEW_BG_COLOR, &mbg);
         }
 
     }

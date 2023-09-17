@@ -19,6 +19,7 @@
 #define UI_FONT_COLOR  lv_color_white()
 #define UI_PAGE_COUNT  4
 #define UI_DM_COLOR lv_color_hex(0x5d750c)
+#define UI_DMM_COLOR lv_color_hex(0xeb1c1c)
 
 #define MSG_NEW_HOUR   1
 #define MSG_NEW_ELEV    2
@@ -32,6 +33,7 @@
 #define MSG_NEW_VARIO_PM 10
 #define MSG_NEW_BUSS 11
 #define MSG_NEW_BUSS_D 12
+#define MSG_NEW_BG_COLOR 13
 
 #define LV_DELAY(x)                                                                                                                                  \
   do {                                                                                                                                               \
