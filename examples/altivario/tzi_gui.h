@@ -34,6 +34,8 @@
 #define MSG_NEW_BUSS 11
 #define MSG_NEW_BUSS_D 12
 #define MSG_NEW_BG_COLOR 13
+#define MSG_NEW_GPSFIX 14
+#define MSG_NEW_BARO 15
 
 #define LV_DELAY(x)                                                                                                                                  \
   do {                                                                                                                                               \

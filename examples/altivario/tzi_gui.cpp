@@ -121,8 +121,13 @@ void ui_toolbar_status(lv_obj_t* parent)
     lv_obj_set_style_text_align(sat_text, LV_ALIGN_CENTER, 0);
     lv_obj_set_style_text_font(sat_text, &lv_font_montserrat_28, 0);
     lv_label_set_recolor(sat_text,true);
-    lv_label_set_text_fmt(sat_text, "#ff00ff %s#",LV_SYMBOL_GPS);
+    lv_label_set_text_fmt(sat_text, "#4f0a4f %s#",LV_SYMBOL_GPS);
     lv_obj_set_style_text_color(sat_text, UI_FONT_COLOR, 0);
+    lv_obj_add_event_cb(sat_text,
+                    update_text_subscriber_cb,
+                    LV_EVENT_MSG_RECEIVED,
+                    NULL);
+    lv_msg_subsribe_obj(MSG_NEW_GPSFIX, sat_text, (void *)"%s");
 
     lv_obj_t *baro_text = lv_label_create(parent);
     lv_obj_set_size(baro_text, elev_png.header.w, 50);
@@ -130,8 +135,13 @@ void ui_toolbar_status(lv_obj_t* parent)
     lv_obj_set_style_text_align(baro_text, LV_ALIGN_CENTER, 0);
     lv_obj_set_style_text_font(baro_text, &lv_font_montserrat_28, 0);
     lv_label_set_recolor(baro_text,true);
-    lv_label_set_text_fmt(baro_text, "#ff00ff %s#",LV_SYMBOL_OK);
+    lv_label_set_text_fmt(baro_text, "#4f0a4f %s#",LV_SYMBOL_OK);
     lv_obj_set_style_text_color(baro_text, UI_FONT_COLOR, 0);   
+    lv_obj_add_event_cb(baro_text,
+                    update_text_subscriber_cb,
+                    LV_EVENT_MSG_RECEIVED,
+                    NULL);
+    lv_msg_subsribe_obj(MSG_NEW_BARO, baro_text, (void *)"%s");
 }
 
 void ui_data_linetrough(lv_obj_t* parent){

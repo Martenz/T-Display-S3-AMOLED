@@ -2,16 +2,10 @@
 #include "lvgl.h"      /* https://github.com/lvgl/lvgl.git */
 
 #include <Arduino.h>
-#include "variables.h"
+#include "altivario.h"
 #include "rm67162.h"
 #include "setup_img.h"
-#include "WiFi.h"
-#include "sntp.h"
-#include "time.h"
 #include "tzi_gui.h"
-//#include "zones.h"
-#include <HTTPClient.h>
-#include <WiFiClientSecure.h>
 
 #if ARDUINO_USB_CDC_ON_BOOT != 1
 #warning "If you need to monitor printed data, be sure to set USB CDC On boot to ENABLE, otherwise you will not see any data in the serial monitor"
@@ -26,37 +20,23 @@ static lv_color_t *buf;
 static uint32_t last_tick = 0;
 static uint32_t last_tick_s = 0;
 static uint32_t last_tick_b = 0;
-static bool setupdone = false;
-static bool gotomainpage = true;
+
 static uint16_t elevation;
-static uint16_t vario_display;
+//static uint16_t vario_display;
 static int16_t vario_dcm;
 static int16_t bussola;
 
-static uint8_t vol_idx=2;
-static char* volumes[3] = {   
-    "#4f0a4f \xEF\x80\xA6#", // LV_SYMBOL_MUTE
-    "#ff00ff \xEF\x80\xA7#", // LV_SYMBOL_VOLUME_MID
-    "#ff00ff \xEF\x80\xA8#"  // LV_SYMBOL_VOLUME_MAX
-    };
-static uint8_t bat_idx=4;
 static char* battery[5] = {
     LV_SYMBOL_BATTERY_EMPTY,
     LV_SYMBOL_BATTERY_1,
     LV_SYMBOL_BATTERY_2,
     LV_SYMBOL_BATTERY_3,
     LV_SYMBOL_BATTERY_FULL};
-static bool ble_on=false;
-static bool wifi_on=false;
-static bool gps_fix=false;
+
+struct statusData status;
 
 OneButton button1(PIN_BUTTON_1, true);
 OneButton button2(PIN_BUTTON_2, true);
-
-void led_task(void *param);
-void elev_task(void *param);
-void vario_task(void *param);
-void gps_task(void *param);
 
 void my_disp_flush(lv_disp_drv_t *disp,
                    const lv_area_t *area,
@@ -148,13 +128,11 @@ void setup()
 
     button2.attachDuringLongPress(
         [](){
-            wifi_on = !wifi_on;
-            if (wifi_on){
-                static char* wfon = "#ff00ff \xEF\x87\xAB#";
+            status.wifi_on = !status.wifi_on;
+            if (status.wifi_on){
                 lv_msg_send(MSG_NEW_WIFI, &wfon);
             }else{
-                static char* wfon = "#4f0a4f \xEF\x87\xAB#";
-                lv_msg_send(MSG_NEW_WIFI, &wfon);
+                lv_msg_send(MSG_NEW_WIFI, &wfoff);
             }
         }
     );
@@ -191,14 +169,17 @@ void loop()
 
 
     // temporary fake setup done - all sensors ok - fake data
-    if (last_tick > 3000){
-        setupdone = true;
+    if (last_tick > 5000 & (!status.baro_ok)){
+        status.baro_ok = true;
+        lv_msg_send(MSG_NEW_BARO,&barook);
+        Serial.print("Test baro done icon.");
     }
 
-    if (last_tick > 10000){
-        ble_on = true;
-        static char* blon = "#ff00ff \xEF\x8a\x93#";
-        lv_msg_send(MSG_NEW_BLE, &blon);
+    if (last_tick > 10000 & (!status.ble_on)){
+        status.ble_on = true;
+        lv_msg_send(MSG_NEW_BLE, &bleon);
+        lv_msg_send(MSG_NEW_GPSFIX, &gpsfix);
+        Serial.print("Test BLE on and GPS fix icons.");
     }
 
     if (millis() - last_tick_b > 500){
@@ -225,7 +206,7 @@ void loop()
 
     // end of temporary fake
 
-    if (setupdone && gotomainpage){
+    if (status.ble_on && gotomainpage){
         ui_gotomain_page();
         gotomainpage = false;
     }
@@ -236,7 +217,7 @@ void led_task(void *param)
 {
         pinMode(PIN_LED, OUTPUT);
         while (1) {
-            if (!setupdone){
+            if (!status.ble_on){
                 digitalWrite(PIN_LED, 1);
                 delay(20);
                 digitalWrite(PIN_LED, 0);
@@ -251,7 +232,7 @@ void led_task(void *param)
 void elev_task(void *param)
 {
     while (1) {
-        delay(1000);
+        delay(990);
         elevation+=1;
         uint16_t el = elevation;
         lv_msg_send(MSG_NEW_ELEV, &el);
@@ -267,14 +248,10 @@ void vario_task(void *param)
         lv_msg_send(MSG_NEW_VARIO, &vario_display);
 
         if (vario_dcm>=0){
-            static char* pv = "#d5ff03 \xEF\x81\xA7#";
             lv_msg_send(MSG_NEW_VARIO_PM, &pv);
-            static int pbg = 0x5d750c;
             lv_msg_send(MSG_NEW_BG_COLOR, &pbg);
         }else{
-            static char* mv = "#ff1900 \xEF\x81\xA8#";
             lv_msg_send(MSG_NEW_VARIO_PM, &mv);
-            static int mbg = 0xb51919;
             lv_msg_send(MSG_NEW_BG_COLOR, &mbg);
         }
 
