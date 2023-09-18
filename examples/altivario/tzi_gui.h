@@ -1,16 +1,4 @@
-/*!
- * @file tzi_gui.h
- *
- *
- */
-
-/*
-*/
-
 #pragma once
-
-#ifndef __TZI_GUI_H__
-#define __TZI_GUI_H__
 
 #include "Arduino.h"
 
@@ -50,6 +38,4 @@ void ui_begin();
 void ui_switch_page(void);
 void ui_switch_page_up(void);
 void ui_switch_page_down(void);
-void ui_gotomain_page(void);
-
-#endif
+void ui_gotomain_page(uint8_t);

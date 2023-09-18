@@ -2,8 +2,6 @@
 #include "Arduino.h"
 #include "lvgl.h"
 
-#define MAINPAGE 3
-
 // TO ENABLE DEFAULT FONTS edit lv_config.h and enable specific font size
 // eg. #define LV_FONT_MONTSERRAT_28 1
 
@@ -50,10 +48,10 @@ void ui_switch_page_down(void)
     lv_obj_set_tile_id(dis, 0, n, LV_ANIM_ON);
 }
 
-void ui_gotomain_page(void)
+void ui_gotomain_page(uint8_t mp)
 {
-    lv_obj_set_tile_id(dis, 0, MAINPAGE, LV_ANIM_ON);
-    n = MAINPAGE;
+    lv_obj_set_tile_id(dis, 0, mp, LV_ANIM_ON);
+    n = (uint8_t)mp;
 }
 
 void ui_toolbar_status(lv_obj_t* parent)
