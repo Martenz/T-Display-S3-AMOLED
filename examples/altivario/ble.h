@@ -23,8 +23,8 @@ bool oldDeviceConnected = false;
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
 
-#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define SERVICE_UUID        "cfe9db21-4691-42eb-93b9-ca259e8f6580"
+#define CHARACTERISTIC_UUID "062cf149-f6df-4b28-b599-08bfb0b017f3"
 
 class MyServerCallbacks : public NimBLEServerCallbacks {
 
@@ -33,28 +33,23 @@ class MyServerCallbacks : public NimBLEServerCallbacks {
     bluetoothStat = 2; //we have a connected client
     NimBLEDevice::startAdvertising();
     status.BLE_connected = true;
+    log_i("BLE connected (ble.h): %i",status.BLE_connected);
   };
 
   void onDisconnect(NimBLEServer* pServer) {
     //log_d("***************************** BLE DISCONNECTED *****************");
     bluetoothStat = 1; //client disconnected
-    //delay(1000);
     NimBLEDevice::startAdvertising();
     status.BLE_connected = false;
   }
 };
 
 void checkReceivedLine(char *ch_str){
-  //log_i("new serial msg=%s",ch_str);
   if(!strncmp(ch_str, "#FNT", 4)){
     delay(1);
   }else if(!strncmp(ch_str, "#FNG", 4)){
     delay(1);
   }else if (!strncmp(ch_str,"$G",2)){
-    //got GPS-Info
-    // if (sNmeaIn.length() == 0){
-    //   sNmeaIn = String(ch_str);
-    // }
     delay(1);
   }
 };
@@ -63,10 +58,8 @@ class MyCallbacks : public NimBLECharacteristicCallbacks {
 
   void onWrite(NimBLECharacteristic *pCharacteristic) {
     static String sLine = "";
-    //pCharacteristic->getData();
     std::string rxValue = pCharacteristic->getValue();
     int valueLength = rxValue.length();
-    //log_i("received:%d",rxValue.length());
     if (valueLength > 0) {
       sLine += rxValue.c_str();
       if (sLine.endsWith("\n")){
@@ -88,7 +81,6 @@ void BLESendChunks(String str)
     for (int k = 0; k < str.length(); k += _min(str.length(), 20)) {
       substr = str.substring(k, k + _min(str.length() - k, 20));
       pCharacteristic->setValue(std::string(substr.c_str()));
-      //pCharacteristic->sNotify = std::string(substr.c_str());
       pCharacteristic->notify();            
       vTaskDelay(5);
     }
@@ -131,11 +123,9 @@ void start_ble (String bleId){
     BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(SERVICE_UUID);
     pAdvertising->setScanResponse(false);
-    /** Note, this could be left out as that is the default value */
     pAdvertising->setMinPreferred(0x0);  // set value to 0x00 to not advertise this parameter
 
     BLEDevice::startAdvertising();
-    // Serial.println("Waiting a client connection to notify...");
     log_i("Waiting a client connection to notify...");
     delay(1);
     bluetoothStat = 1;

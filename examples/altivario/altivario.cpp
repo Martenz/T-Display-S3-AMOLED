@@ -1,12 +1,19 @@
+#include <Arduino.h>
+#include "altivario.h"
 #include "OneButton.h" /* https://github.com/mathertel/OneButton.git */
 #include "lvgl.h"      /* https://github.com/lvgl/lvgl.git */
 
-#include <Arduino.h>
-#include "altivario.h"
+#include "esp_log.h"
 #include "rm67162.h"
 #include "setup_img.h"
 #include "tzi_gui.h"
 #include "ble.h"
+
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+#include "ubloxConfigSentences.h"
+
+TinyGPSPlus gps;
 
 #if ARDUINO_USB_CDC_ON_BOOT != 1
 #warning "If you need to monitor printed data, be sure to set USB CDC On boot to ENABLE, otherwise you will not see any data in the serial monitor"
@@ -24,11 +31,6 @@ static uint32_t last_tick = 0;
 static uint32_t last_tick_s = 0;
 static uint32_t last_tick_b = 0;
 
-static uint16_t elevation;
-//static uint16_t vario_display;
-static int16_t vario_dcm;
-static int16_t bussola;
-
 static char* battery[5] = {
     LV_SYMBOL_BATTERY_EMPTY,
     LV_SYMBOL_BATTERY_1,
@@ -37,6 +39,10 @@ static char* battery[5] = {
     LV_SYMBOL_BATTERY_FULL};
 
 struct statusData status;
+
+SoftwareSerial ss(GPSRXPIN, GPSTXPIN);
+bool nmeaReady = false;
+
 
 OneButton button1(PIN_BUTTON_1, true);
 OneButton button2(PIN_BUTTON_2, true);
@@ -107,9 +113,6 @@ void print_wakeup_reason(){
 
 void setup()
 {
-    elevation = 1017;
-    vario_dcm = -10;
-    bussola = 0;
 
     Serial.begin(115200);
 
@@ -132,14 +135,24 @@ void setup()
     Serial.println(chipId);
 
     status.chipId = chipId;
+    delay(50);
+
+    pinMode(GPSRXPIN,INPUT);
+    pinMode(GPSTXPIN,OUTPUT);
+    ss.begin(GPSBAUD);
+    delay(500);
+    resetUBX();
+    changeGpsHz();
+    setSentences();
+    delay(50);
 
     rm67162_init(); // amoled lcd initialization
     lcd_setRotation(1);
     xTaskCreatePinnedToCore(led_task, "led_task", 1024, NULL, 1, NULL, 0);
-    xTaskCreatePinnedToCore(elev_task, "elev_task", 4096, NULL, 2, NULL, 1);
-    xTaskCreatePinnedToCore(vario_task, "vario_task", 4096, NULL, 4, NULL, 1);
-    xTaskCreatePinnedToCore(gps_task, "gps_task", 4096, NULL, 3, NULL, 1);
+    xTaskCreatePinnedToCore(taskOledUpdate, "taskOledUpdate", 4096, NULL, 2, NULL, 1);
+    xTaskCreatePinnedToCore(taskBaro, "taskBaro", 6500, NULL, 4, NULL, 1);
     xTaskCreatePinnedToCore(taskBluetooth, "taskBluetooth", 6500, NULL, 3, &xHandleBluetooth, 0);
+    xTaskCreatePinnedToCore(taskGPSU7, "taskGPSU7", 7500, NULL, 5, &xHandleGPSU7, 1); 
 
     /*Initialize the display*/
     lv_init();
@@ -225,8 +238,8 @@ void loop()
         Serial.print("Test baro done icon.");
     }
 
-    if (last_tick > 6000 & (!status.gps_fix)){
-        status.gps_fix = true;
+    if (last_tick > 6000 & (!status.GPS_Fix)){
+        status.GPS_Fix = true;
         lv_msg_send(MSG_NEW_GPSFIX, &gpsfix);
         Serial.print("Test gpsfix done icon.");
     }
@@ -258,13 +271,28 @@ void loop()
         last_tick_b = millis();
     }
 
-    status.mainpage = random(0,4);
+//    status.mainpage = random(0,4);
 
     // end of temporary fake
 
-    if (status.BLE_connected && gotomainpage){
+    char sOut[MAXSTRING];
+    int pos = 0;
+    pos += snprintf(&sOut[pos],MAXSTRING-pos,"$LK8EX1,");
+    pos += snprintf(&sOut[pos],MAXSTRING-pos,"%d,%d,",(status.pressure*100),status.elevation);
+    pos += snprintf(&sOut[pos],MAXSTRING-pos,"%d,999,",(status.vario_dcm*10));
+    pos += snprintf(&sOut[pos],MAXSTRING-pos,"%lu,",status.battery + 1000);
+    //      pos += snprintf(&sOut[pos],MAXSTRING-pos,"%.02f,",status.batterymV);
+    pos = getChecksum(sOut,MAXSTRING);
+    //strcat(sOut,"\r\n0");
+    status.LK8EX1_s = String(sOut);    
+
+    if (status.BLE_connected & gotomainpage){
         ui_gotomain_page(status.mainpage);
         gotomainpage = false;
+        lv_msg_send(MSG_NEW_BLE, &bleon);
+    }
+    if (!status.BLE_connected){
+        lv_msg_send(MSG_NEW_BLE, &bleoff);
     }
 
 }
@@ -285,25 +313,36 @@ void led_task(void *param)
         }
 }
 
-void elev_task(void *param)
+void taskBaro(void *param)
 {
+    uint8_t ti = 0;
     while (1) {
-        delay(990);
-        elevation+=1;
-        uint16_t el = elevation;
-        lv_msg_send(MSG_NEW_ELEV, &el);
-    }        
+        delay(50);
+        status.vario_dcm = status.vario_dcm+1 > 10 ? -10 : status.vario_dcm+1;
+        status.elevation = ti==20 ? status.elevation + 1 : status.elevation;
+        ti = ti + 1 > 20 ? 0 : ti + 1;
+
+//        log_i("Elevation: %i - Vario: %i",status.elevation,status.vario_dcm);
+        // TODO - read from bmp280 data ...
+
+    }
 }
 
-void vario_task(void *param)
+void taskOledUpdate(void *param)
 {
-    while (1) {
+    while (1){
         delay(250);
-        vario_dcm = vario_dcm+1 > 10 ? -10 : vario_dcm+1;
-        uint16_t vario_display = abs(vario_dcm);
-        lv_msg_send(MSG_NEW_VARIO, &vario_display);
 
-        if (vario_dcm>=0){
+        int32_t b = 3599 - int(status.GPS_course*10.); //bussola;
+        lv_msg_send(MSG_NEW_BUSS, &b);
+        int32_t bd = int(status.GPS_course*10.)/10;
+        lv_msg_send(MSG_NEW_BUSS_D, &bd);
+
+        uint32_t vda = abs(status.vario_dcm);
+        lv_msg_send(MSG_NEW_VARIO, &vda);
+
+        int32_t vd = status.vario_dcm;
+        if (vd>=0){
             lv_msg_send(MSG_NEW_VARIO_PM, &pv);
             lv_msg_send(MSG_NEW_BG_COLOR, &pbg);
         }else{
@@ -311,34 +350,16 @@ void vario_task(void *param)
             lv_msg_send(MSG_NEW_BG_COLOR, &mbg);
         }
 
-        // BLE output
-        //$LK8EX1,101300,99999,99999,99,999,
-        //LK8EX1,pressure,altitude,vario,temperature,battery,*checksum
-        char sOut[MAXSTRING];
-        int pos = 0;
-        pos += snprintf(&sOut[pos],MAXSTRING-pos,"$LK8EX1,");
-        pos += snprintf(&sOut[pos],MAXSTRING-pos,"%d,%d,",(status.pressure*100.0),status.elevation);
-        pos += snprintf(&sOut[pos],MAXSTRING-pos,"%d,999,",(status.vario_dcm * 10.0));
-        pos += snprintf(&sOut[pos],MAXSTRING-pos,"%lu,",status.battery + 1000);
-        //      pos += snprintf(&sOut[pos],MAXSTRING-pos,"%.02f,",status.batterymV);
-        pos = getChecksum(sOut,MAXSTRING);
-        //strcat(sOut,"\r\n0");
-        status.LK8EX1_s = String(sOut);    }
-}
+        int32_t el = +status.elevation;
+        lv_msg_send(MSG_NEW_ELEV, &el);
 
-void gps_task(void *param)
-{
-    while (1){
-        delay(50);
-        bussola = bussola +10 > 3599 ? 0 : bussola + 10;
-        int16_t b = 3599 - bussola;
-        lv_msg_send(MSG_NEW_BUSS, &b);
-        int16_t bd = bussola/10;
-        lv_msg_send(MSG_NEW_BUSS_D, &bd);
+//        log_i("Elevation: %i - Vario: %i",el,vd);
+
     }
+
 }
 
-void taskBluetooth(void *pvParameters) {
+void taskBluetooth(void *param) {
   status.ble_init = false;
 
   while (1)
@@ -386,8 +407,7 @@ void taskBluetooth(void *pvParameters) {
           }
         }
 
-      if (status.lowPower) break;
-
+      if (status.lowPower) break; 
       delay(50);
     };
 
@@ -403,4 +423,191 @@ void taskBluetooth(void *pvParameters) {
           log_i("stop task BLE");
          vTaskDelete( xHandleBluetooth );
      }
+}
+
+void sendUBX(const unsigned char *progmemBytes, size_t len )
+{
+  ss.write( 0xB5 ); // SYNC1
+  ss.write( 0x62 ); // SYNC2
+
+  uint8_t a = 0, b = 0;
+  while (len-- > 0) {
+    uint8_t c = pgm_read_byte( progmemBytes++ );
+    a += c;
+    b += a;
+    ss.write( c );
+  }
+  ss.write( a ); // CHECKSUM A
+  ss.write( b ); // CHECKSUM B
+} // sendUBX
+
+void resetUBX(){
+    sendUBX( ubxReset, sizeof(ubxReset) );
+    delay(500);
+}
+
+void setSentences(){
+
+  // XCTrack supported sentences $GPRMC, $GNRMC, $GPGGA, $GNGGA
+
+  //    Serial.println("Disable NMEA GSA, GSV, VTG, ZDA");
+
+    log_i("Disable NMEA GLL");
+     sendUBX( ubxDisableGLL, sizeof(ubxDisableGLL) );  
+     delay(200);
+
+    // log_i("Disable NMEA GGA");
+    //  sendUBX( ubxDisableGGA, sizeof(ubxDisableGGA) );  
+    //  delay(200);
+
+    log_i("Disable NMEA GSA");
+     sendUBX( ubxDisableGSA, sizeof(ubxDisableGSA) );  
+     delay(200);
+
+    // log_i("Disable NMEA RMC");
+    //  sendUBX( ubxDisableRMC, sizeof(ubxDisableRMC) );  
+    //  delay(200);
+
+    log_i("Disable NMEA GSV");
+     sendUBX( ubxDisableGSV, sizeof(ubxDisableGSV) );  
+     delay(200);
+
+   log_i("Disable NMEA VTG");
+    sendUBX( ubxDisableVTG, sizeof(ubxDisableVTG) );  
+    delay(200);
+
+   log_i("Disable NMEA ZDA");
+    sendUBX( ubxDisableZDA, sizeof(ubxDisableZDA) );    
+    delay(200);
+
+    sendUBX( ubxReset, sizeof(ubxReset) );
+    delay(500);
+}
+
+void changeGpsHz(){
+
+  log_i("Change Hz mode switch to %lu Hz",status.gps_hz);
+  switch (status.gps_hz){
+      case 1:
+        sendUBX( ubxRate1Hz, sizeof(ubxRate1Hz) );
+        break;
+      case 5:
+        sendUBX( ubxRate5Hz, sizeof(ubxRate5Hz) );
+        break;
+      case 10:
+        sendUBX( ubxRate10Hz, sizeof(ubxRate10Hz) );
+        break;
+      case 16:
+        sendUBX( ubxRate16Hz, sizeof(ubxRate16Hz) );
+        break;
+      default:
+        sendUBX( ubxRate1Hz, sizeof(ubxRate1Hz) );        
+    }
+
+    delay(200);
+
+}
+
+void taskGPSU7(void *param){
+
+    // wait some time to init ss serial to gps
+    delay(3000);
+    //Serial.println("Resetting ublox");
+
+//    log_i("Resetting ublox");
+//    sendUBX( ubxReset, sizeof(ubxReset) );
+//    delay(500);
+
+    // Serial.print("Change Hz switch to ");
+    // Serial.print(status.gps_hz);
+    // Serial.println("Hz mode.");
+    //changeGpsHz();
+//    Serial.flush();
+
+  String readString = "$";
+
+  status.restart_GPS = false;
+  status.resetGpsHz = false;
+
+  while(1){
+
+//   status.bussola = status.bussola +1 > 359 ? 0 : status.bussola + 1;
+
+    if (status.restart_GPS){
+      // sendUBX( ubxReset, sizeof(ubxReset) );
+      // delay(500);
+      resetUBX();
+      delay(500);
+      status.restart_GPS = false;
+      //Serial.println("Restarting GPS module.");
+      log_i("Restarting GPS module.");
+      //delay(500);
+    }
+
+    if (status.resetGpsHz){
+      changeGpsHz();
+      //Serial.println("Resetting GPS frq Hz");
+      log_i("Resetting GPS frq Hz");
+      delay(500);
+      status.resetGpsHz = false;
+    }
+
+    while (ss.available() > 0 ){
+      char c = ss.read();
+      if (gps.encode(c)){
+        if(gps.location.isValid()){
+          status.GPS_Fix = true;
+          status.GPS_sat = gps.satellites.value(); 
+          status.GPS_Lat = gps.location.lat();
+          status.GPS_Lon = gps.location.lng();
+          status.GPS_alt = gps.altitude.meters();
+          status.GPS_year = gps.date.year();
+          status.GPS_month = gps.date.month();
+          status.GPS_day = gps.date.day();
+          status.GPS_hour = gps.time.hour();
+          status.GPS_min = gps.time.minute();
+          status.GPS_sec = gps.time.second();
+          status.GPS_speed = gps.speed.kmph();
+          status.GPS_course = gps.course.deg();
+        }else{
+          status.GPS_Fix = false;
+          break;
+        }     
+      }
+
+      if(c!= '\r' && c != '\n' && c != '$') {
+          readString += c;
+        }else{
+          if (c == '$'){
+            //if( readString.indexOf("GPGGA") > 0  || readString.indexOf("GPRMC") > 0){
+            if (readString.indexOf("GNTXT") >0 ){
+              log_e("GPS: %s",readString.c_str());
+            }else{
+              status.NMEA_raw = readString;                
+              nmeaReady = true;
+            }            
+            //}//else{ble_data = "";}
+              delay(1);
+              readString="$";              
+          }//else{readString = "";}
+        }
+
+    }
+       
+    if (millis() > 30000 && gps.charsProcessed() < 10)
+    {
+      Serial.println(F("No GPS detected: check wiring."));  
+      log_e("No GPS detected: check wiring.");
+      break;
+    }
+
+    if (status.lowPower) break;
+    delay(10);
+  }
+
+  ss.end();
+  // log_i("stop task GPSU7");
+  // Serial.println("stop task GPSU7");
+  log_i("stop task GPSU7");
+  vTaskDelete(xHandleGPSU7);
 }
