@@ -33,7 +33,7 @@ BMP280_DEV bmp280(BARO_SDA, BARO_SCL);
 
 // Battery
 SimpleKalmanFilter voltKalmanFilter(0.1,0.1,0.1);
-float voltages[VPARRAYSIZE] = {3.50, 3.60, 3.70, 3.80, 3.90, 4.00, 4.05, 4.20 };
+float voltages[VPARRAYSIZE] = {3500, 3600, 3700, 3800, 3900, 4000, 4050, 4200 };
 uint8_t percentages[VPARRAYSIZE] = {  0,  20,  50,  80,  95,  98,   99, 100 };
 
 #if ARDUINO_USB_CDC_ON_BOOT != 1
@@ -52,12 +52,14 @@ static uint32_t last_tick = 0;
 static uint32_t last_tick_s = 0;
 static uint32_t last_tick_b = 0;
 
-static char* battery[5] = {
+static char* battery[7] = {
     LV_SYMBOL_BATTERY_EMPTY,
     LV_SYMBOL_BATTERY_1,
     LV_SYMBOL_BATTERY_2,
     LV_SYMBOL_BATTERY_3,
-    LV_SYMBOL_BATTERY_FULL};
+    LV_SYMBOL_BATTERY_FULL,
+    LV_SYMBOL_CHARGE,
+    LV_SYMBOL_USB};
 
 struct statusData status;
 
@@ -273,7 +275,11 @@ void loop()
         // TEST
         log_i("Volt read average (kalman): %.f",status.batterymV);
         char* nb = battery[4];
-        if (volt_avg>uint32_t(4050)){
+        if (volt_avg>=uint32_t(4200)){
+            nb = battery[6];
+        }else if (volt_avg>=uint32_t(4050)){
+            nb = battery[5];
+        }else if (volt_avg>=uint32_t(3900)){
             nb = battery[4];
         }else if (volt_avg >= uint32_t(3800)){
             nb = battery[3];
