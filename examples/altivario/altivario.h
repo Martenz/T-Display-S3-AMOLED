@@ -113,3 +113,5 @@ void setSentences();
 TaskHandle_t xHandleBluetooth = NULL;
 TaskHandle_t xHandleGPSU7 = NULL;
 
+void sendUBX(const unsigned char *progmemBytes, size_t len );
+

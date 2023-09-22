@@ -200,7 +200,13 @@ void setup()
     button1.attachLongPressStop(
     []() {
         uint64_t mask = 1 << PIN_BUTTON_1;
+
         lcd_sleep();
+
+        log_i("Disable GPS");
+        sendUBX( UBLOX_POWER_OFF, sizeof(UBLOX_POWER_OFF) );  
+        delay(1000);
+
         esp_sleep_enable_ext1_wakeup(mask, ESP_EXT1_WAKEUP_ALL_LOW);
         esp_deep_sleep_start();
     }        
