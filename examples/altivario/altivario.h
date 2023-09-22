@@ -8,7 +8,13 @@
 #define GPSRXPIN 44 // from tx BIANCO
 #define GPSTXPIN 43 // from rx VERDE
 
+#define BARO_SDA 41
+#define BARO_SCL 40
+
 #define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
+
+#define VPARRAYSIZE 8
+
 
 struct statusData{
 
@@ -41,9 +47,24 @@ struct statusData{
     
     bool baro_ok=false;
 
-    int16_t elevation = 1017;
+    float altitude=0.f;
+    float vario=0.f;
+    float vario_avg=0.f;
+    float vario_avg_b=0.f;
+    uint16_t vario_avg_ms=50;
+    uint16_t vario_avg_ms_b=50;
+
+    bool thermalling=false;
+    bool thermal_detect=false;
+    uint16_t thermal_avg=0;
+    int16_t GPS_course_prev = 0;
+    int8_t avg_course = 0;
+    int turn = 0;
+
+//    int16_t elevation = 1017;
     int16_t vario_dcm = 0;
     int16_t pressure = 1013;
+    float batterymV = 4.2f;
     int16_t battery = 80;
 
     String LK8EX1_s;

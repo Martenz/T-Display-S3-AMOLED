@@ -15,6 +15,27 @@
 
 TinyGPSPlus gps;
 
+#include <BMP280_DEV.h>    
+#include <SimpleKalmanFilter.h>
+  float temperature=0.;
+  float pressure = 101325;
+  float altitude = 0.;            // Create the temperature, pressure and altitude variables
+  uint16_t t_avg_vario = 0;
+  uint16_t t_avg_vario_b = 0;
+  uint16_t t_avg_vario_start = millis();
+  uint16_t t_avg_vario_b_start = millis();
+  uint16_t t_avg_n = 1;
+  uint16_t t_avg_b_n = 1;
+  float vario_mavg = 0.;
+  float vario_mavg_b = 0.;
+  SimpleKalmanFilter altKalmanFilter(0.2, 0.2, 0.05);
+BMP280_DEV bmp280(BARO_SDA, BARO_SCL);   
+
+// Battery
+SimpleKalmanFilter voltKalmanFilter(0.1,0.1,0.1);
+float voltages[VPARRAYSIZE] = {3.50, 3.60, 3.70, 3.80, 3.90, 4.00, 4.05, 4.20 };
+uint8_t percentages[VPARRAYSIZE] = {  0,  20,  50,  80,  95,  98,   99, 100 };
+
 #if ARDUINO_USB_CDC_ON_BOOT != 1
 #warning "If you need to monitor printed data, be sure to set USB CDC On boot to ENABLE, otherwise you will not see any data in the serial monitor"
 #endif
@@ -216,15 +237,56 @@ void setup()
 
 }
 
+uint8_t getBatteryPerc(){
+  float bp = 0;
+  float bv = 0;
+  uint8_t vidx=0;
+  for (uint8_t vix=0; vix<VPARRAYSIZE; vix++){
+    if (status.batterymV >= voltages[vix]) {
+      bv = voltages[vix];    
+      vidx = vix;
+    }
+  }
+  if (bv > 0) {
+    if(vidx < VPARRAYSIZE -1){
+      bp =  percentages[vidx]; 
+      bp += (percentages[vidx+1]-percentages[vidx]) * ((status.batterymV - bv) / (voltages[vidx+1]-voltages[vidx]));
+    }else{
+      bp = 100.0;
+    }
+  }
+  return (uint8_t)bp;
+}
+
 void loop()
 {
     lv_timer_handler();
     delay(2);
     button1.tick();
     button2.tick();
-    if (millis() - last_tick > 100) {
+
+    if (millis() - last_tick > 500) {
         uint32_t volt = (analogReadMilliVolts(PIN_BAT_VOLT) * 2);
-        lv_msg_send(MSG_NEW_VOLT, &volt);
+        uint32_t volt_avg = voltKalmanFilter.updateEstimate(volt);
+        status.batterymV = volt_avg; 
+        status.battery = getBatteryPerc();
+        // TEST
+        // voltAdcPin_round = 3.4;
+        char* nb = battery[4];
+        if (volt_avg>uint32_t(4050)){
+            nb = battery[4];
+        }else if (volt_avg >= uint32_t(3800)){
+            nb = battery[3];
+        }else if (volt_avg >=uint32_t(3700)){
+            nb = battery[2];
+        }else if (volt_avg >= uint32_t(3600)){
+            nb = battery[1];
+        }else{
+            nb = battery[0];
+        }
+        lv_msg_send(MSG_NEW_BATTERY, &nb);
+
+//        lv_msg_send(MSG_NEW_VOLT, &volt);
 
         last_tick = millis();
     }
@@ -232,17 +294,17 @@ void loop()
 
 
     // temporary fake setup done - all sensors ok - fake data
-    if (last_tick > 5000 & (!status.baro_ok)){
-        status.baro_ok = true;
-        lv_msg_send(MSG_NEW_BARO,&barook);
-        Serial.print("Test baro done icon.");
-    }
+    // if (last_tick > 5000 & (!status.baro_ok)){
+    //     status.baro_ok = true;
+    //     lv_msg_send(MSG_NEW_BARO,&barook);
+    //     Serial.print("Test baro done icon.");
+    // }
 
-    if (last_tick > 6000 & (!status.GPS_Fix)){
-        status.GPS_Fix = true;
-        lv_msg_send(MSG_NEW_GPSFIX, &gpsfix);
-        Serial.print("Test gpsfix done icon.");
-    }
+    // if (last_tick > 6000 & (!status.GPS_Fix)){
+    //     status.GPS_Fix = true;
+    //     lv_msg_send(MSG_NEW_GPSFIX, &gpsfix);
+    //     Serial.print("Test gpsfix done icon.");
+    // }
 
     // if (last_tick > 7000 & (!status.BLE_connected)){
     //     status.BLE_connected = true;
@@ -250,41 +312,41 @@ void loop()
     //     Serial.print("Test BLE on icons.");
     // }
 
-    if (millis() - last_tick_b > 500){
-        // bat_idx = (bat_idx+1)%5;
-        static char* nb = battery[bat_idx];
-        uint32_t volt = 3650;//(analogReadMilliVolts(PIN_BAT_VOLT) * 2);
-        //char* nb = battery[0];
-        if (volt>uint32_t(4050)){
-            nb = battery[4];
-        }else if (volt >= uint32_t(3800)){
-            nb = battery[3];
-        }else if (volt >=uint32_t(3700)){
-            nb = battery[2];
-        }else if (volt >= uint32_t(3600)){
-            nb = battery[1];
-        }else{
-            nb = battery[0];
-        }
+    // if (millis() - last_tick_b > 500){
+    //     // bat_idx = (bat_idx+1)%5;
+    //     static char* nb = battery[bat_idx];
+    //     uint32_t volt = 3650;//(analogReadMilliVolts(PIN_BAT_VOLT) * 2);
+    //     //char* nb = battery[0];
+    //     if (volt>uint32_t(4050)){
+    //         nb = battery[4];
+    //     }else if (volt >= uint32_t(3800)){
+    //         nb = battery[3];
+    //     }else if (volt >=uint32_t(3700)){
+    //         nb = battery[2];
+    //     }else if (volt >= uint32_t(3600)){
+    //         nb = battery[1];
+    //     }else{
+    //         nb = battery[0];
+    //     }
  
-        lv_msg_send(MSG_NEW_BATTERY, &nb);
-        last_tick_b = millis();
-    }
+    //     lv_msg_send(MSG_NEW_BATTERY, &nb);
+    //     last_tick_b = millis();
+    // }
 
 //    status.mainpage = random(0,4);
 
     // end of temporary fake
 
-    char sOut[MAXSTRING];
-    int pos = 0;
-    pos += snprintf(&sOut[pos],MAXSTRING-pos,"$LK8EX1,");
-    pos += snprintf(&sOut[pos],MAXSTRING-pos,"%d,%d,",(status.pressure*100),status.elevation);
-    pos += snprintf(&sOut[pos],MAXSTRING-pos,"%d,999,",(status.vario_dcm*10));
-    pos += snprintf(&sOut[pos],MAXSTRING-pos,"%lu,",status.battery + 1000);
-    //      pos += snprintf(&sOut[pos],MAXSTRING-pos,"%.02f,",status.batterymV);
-    pos = getChecksum(sOut,MAXSTRING);
-    //strcat(sOut,"\r\n0");
-    status.LK8EX1_s = String(sOut);    
+    // char sOut[MAXSTRING];
+    // int pos = 0;
+    // pos += snprintf(&sOut[pos],MAXSTRING-pos,"$LK8EX1,");
+    // pos += snprintf(&sOut[pos],MAXSTRING-pos,"%d,%d,",(status.pressure*100),status.elevation);
+    // pos += snprintf(&sOut[pos],MAXSTRING-pos,"%d,999,",(status.vario_dcm*10));
+    // pos += snprintf(&sOut[pos],MAXSTRING-pos,"%lu,",status.battery + 1000);
+    // //      pos += snprintf(&sOut[pos],MAXSTRING-pos,"%.02f,",status.batterymV);
+    // pos = getChecksum(sOut,MAXSTRING);
+    // //strcat(sOut,"\r\n0");
+    // status.LK8EX1_s = String(sOut);    
 
     if (status.BLE_connected & gotomainpage){
         ui_gotomain_page(status.mainpage);
@@ -313,17 +375,129 @@ void led_task(void *param)
         }
 }
 
+// Display vario avg value
+float average_vario(float vario){
+
+  uint16_t avg_msv = status.thermalling && status.thermal_detect ? status.thermal_avg : status.vario_avg_ms;
+
+  if (avg_msv < 100) return vario;
+  float avg_vario = 0.0;
+  if (t_avg_vario < avg_msv){
+    vario_mavg += vario;
+    t_avg_n += 1;
+    t_avg_vario = millis() - t_avg_vario_start;
+    return status.vario_avg;
+  }else{
+    avg_vario = vario_mavg/(float)t_avg_n;
+    t_avg_n = 0;
+    t_avg_vario = 0;
+    t_avg_vario_start = millis();
+    vario_mavg = 0.0;
+  }
+  return avg_vario;
+}
+
+// Buzzer vario avg value
+float average_vario_b(float vario){
+
+  uint16_t avg_msv = status.thermalling && status.thermal_detect ? status.thermal_avg : status.vario_avg_ms_b;
+
+  if (avg_msv < 100) return vario;
+  float avg_vario = 0.0;
+  if (t_avg_vario_b < avg_msv){
+    vario_mavg_b += vario;
+    t_avg_b_n += 1;
+    t_avg_vario_b = millis() - t_avg_vario_b_start;
+    return status.vario_avg_b;
+  }else{
+    avg_vario = vario_mavg_b/(float)t_avg_b_n;
+    t_avg_b_n = 0;
+    t_avg_vario_b = 0;
+    t_avg_vario_b_start = millis();
+    vario_mavg_b = 0.0;
+  }
+  return avg_vario;
+}
+
 void taskBaro(void *param)
 {
-    uint8_t ti = 0;
+
+  float prev_altitude = 0.f;
+  long start_time = millis();
+  if(bmp280.begin(0x76)){
+      // Serial.println("BMP280 setup done.");
+      log_i("BMP280 setup done.");
+      bmp280.setTimeStandby(TIME_STANDBY_62MS);     // Set the standby time to 2 seconds
+      bmp280.startNormalConversion();                 // Start BMP280 continuous conversion in NORMAL_MODE
+      status.baro_ok = true;
+  }else{
+      // Serial.println("BMP280 not found!");
+      log_e("BMP280 not found!");
+      status.baro_ok = false;
+  }
+
+//    uint8_t ti = 0;
     while (1) {
-        delay(50);
-        status.vario_dcm = status.vario_dcm+1 > 10 ? -10 : status.vario_dcm+1;
-        status.elevation = ti==20 ? status.elevation + 1 : status.elevation;
-        ti = ti + 1 > 20 ? 0 : ti + 1;
+//        delay(50);
+        // status.vario_dcm = status.vario_dcm+1 > 10 ? -10 : status.vario_dcm+1;
+        // status.elevation = ti==20 ? status.elevation + 1 : status.elevation;
+        // ti = ti + 1 > 20 ? 0 : ti + 1;
 
 //        log_i("Elevation: %i - Vario: %i",status.elevation,status.vario_dcm);
         // TODO - read from bmp280 data ...
+
+    if (bmp280.getMeasurements(temperature, pressure, altitude)){
+
+      status.pressure = pressure;
+      //status.temperature = temperature;
+
+      float estimated_alt = altKalmanFilter.updateEstimate(altitude);
+      long dt = millis()-start_time;
+      float vario = 1000.0f / dt * ( estimated_alt - prev_altitude );
+
+      prev_altitude = estimated_alt;
+      start_time = millis();
+
+      // Serial.print("ms: ");
+      // Serial.print(dt);
+      // Serial.print(" alt: ");
+      // Serial.print(altitude);
+      // Serial.print(" est.alt: ");
+      // Serial.print(estimated_alt);
+      // Serial.print(" est.vario: ");
+      // Serial.println(vario);
+
+      status.altitude = estimated_alt;
+      status.vario = vario;
+      status.vario_avg = average_vario(vario);
+      status.vario_dcm = int(status.vario_avg*10);
+      status.vario_avg_b = average_vario_b(vario);
+
+      //$LK8EX1,101300,99999,99999,99,999,
+      //LK8EX1,pressure,altitude,vario,temperature,battery,*checksum
+      char sOut[MAXSTRING];
+      int pos = 0;
+      pos += snprintf(&sOut[pos],MAXSTRING-pos,"$LK8EX1,");
+      pos += snprintf(&sOut[pos],MAXSTRING-pos,"%.f,%.f,",(status.pressure*100.0),status.altitude);
+      pos += snprintf(&sOut[pos],MAXSTRING-pos,"%.f,999,",(status.vario * 100.0));
+      pos += snprintf(&sOut[pos],MAXSTRING-pos,"%lu,",status.battery + 1000);
+//      pos += snprintf(&sOut[pos],MAXSTRING-pos,"%.02f,",status.batterymV);
+      pos = getChecksum(sOut,MAXSTRING);
+      //strcat(sOut,"\r\n0");
+      status.LK8EX1_s = String(sOut);
+
+    }
+  
+    // if (status.update_kalman){
+    //   altKalmanFilter.setEstimateError(status.kalman_e_est);
+    //   altKalmanFilter.setMeasurementError(status.kalman_e_mea);
+    //   altKalmanFilter.setProcessNoise(status.kalman_q);      
+    //   log_i("Updating kalman e_est:%f e_mea:%f q:%f",status.kalman_e_est,status.kalman_e_mea,status.kalman_q);  
+    //   status.update_kalman = false;
+    // }
+    
+    if (status.lowPower) break;
+    delay(10);
 
     }
 }
@@ -350,8 +524,18 @@ void taskOledUpdate(void *param)
             lv_msg_send(MSG_NEW_BG_COLOR, &mbg);
         }
 
-        int32_t el = +status.elevation;
-        lv_msg_send(MSG_NEW_ELEV, &el);
+        if (status.GPS_Fix){
+          lv_msg_send(MSG_NEW_GPSFIX, &gpsfix);
+
+          int32_t el = +status.GPS_alt;
+          lv_msg_send(MSG_NEW_ELEV, &el);
+        }else{
+          lv_msg_send(MSG_NEW_GPSFIX, &gpsnofix);
+          int32_t el = int(status.altitude);
+          lv_msg_send(MSG_NEW_ELEV, &el);
+        }
+
+        if (status.baro_ok) lv_msg_send(MSG_NEW_BARO,&barook);
 
 //        log_i("Elevation: %i - Vario: %i",el,vd);
 
