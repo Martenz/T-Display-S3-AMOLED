@@ -271,7 +271,7 @@ void loop()
         status.batterymV = volt_avg; 
         status.battery = getBatteryPerc();
         // TEST
-        // voltAdcPin_round = 3.4;
+        log_i("Volt read average (kalman): %.f",status.batterymV);
         char* nb = battery[4];
         if (volt_avg>uint32_t(4050)){
             nb = battery[4];
