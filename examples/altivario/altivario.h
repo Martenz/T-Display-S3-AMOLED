@@ -39,6 +39,7 @@ struct statusData{
     uint8_t GPS_sec=0;
     double GPS_speed=0.;
     double GPS_course = 0.;
+    char GPS_course_c[3] = "--";
     uint8_t GPS_sat=0;
     bool restart_GPS=false;
     bool resetGpsHz=false;

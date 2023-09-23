@@ -24,6 +24,8 @@
 #define MSG_NEW_BG_COLOR 13
 #define MSG_NEW_GPSFIX 14
 #define MSG_NEW_BARO 15
+#define MSG_NEW_VARIO_M 16
+#define MSG_NEW_NESW 17
 
 #define LV_DELAY(x)                                                                                                                                  \
   do {                                                                                                                                               \

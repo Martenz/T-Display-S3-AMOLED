@@ -193,6 +193,39 @@ void ui_begin()
     lv_obj_set_style_border_color(p2_data, UI_BG_COLOR, 0);
     lv_obj_clear_flag(p2_data, LV_OBJ_FLAG_SCROLLABLE);
 
+    // SMALL DATA
+    lv_obj_t *p2_data_small = lv_obj_create(main_p2);
+    lv_obj_set_size(p2_data_small, 200, 60);
+    lv_obj_align(p2_data_small, LV_ALIGN_TOP_MID, 0, -20);
+    lv_obj_set_style_bg_color(p2_data_small, UI_BG_COLOR, 0);
+    lv_obj_set_style_border_color(p2_data_small, UI_BG_COLOR, 0);
+    lv_obj_clear_flag(p2_data_small, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t *c2_label_s = lv_label_create(main_p2);
+    lv_obj_align(c2_label_s, LV_ALIGN_TOP_LEFT, 10, 30);
+    lv_obj_set_style_text_align(c2_label_s, LV_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(c2_label_s, &lv_font_montserrat_42, 0);
+    lv_label_set_text(c2_label_s, "NS");
+    lv_obj_set_style_text_color(c2_label_s, UI_FONT_COLOR, 0);
+    lv_obj_add_event_cb(c2_label_s,
+                        update_text_subscriber_cb,
+                        LV_EVENT_MSG_RECEIVED,
+                        NULL);
+    lv_msg_subsribe_obj(MSG_NEW_NESW, c2_label_s, (void *)"%s");
+
+    lv_obj_t *ms_label_s = lv_label_create(p2_data_small);
+    lv_obj_align(ms_label_s, LV_ALIGN_TOP_RIGHT, 0, -10);
+    lv_obj_set_style_text_align(ms_label_s, LV_ALIGN_RIGHT_MID, 0);
+    lv_obj_set_style_text_font(ms_label_s, &lv_font_montserrat_42, 0);
+    lv_label_set_text(ms_label_s, "+1.2 m|s");
+    lv_obj_set_style_text_color(ms_label_s, UI_FONT_COLOR, 0);
+    lv_obj_add_event_cb(ms_label_s,
+                        update_text_subscriber_cb,
+                        LV_EVENT_MSG_RECEIVED,
+                        NULL);
+    lv_msg_subsribe_obj(MSG_NEW_VARIO_M, ms_label_s, (void *)"%s m|s");
+    //END SMALL DATA
+
     lv_obj_t *elev_img = lv_img_create(main_p2);
     lv_obj_align(elev_img, LV_ALIGN_LEFT_MID, 0, 0);
     lv_img_set_src(elev_img,&elev_png);
@@ -216,7 +249,7 @@ void ui_begin()
                         update_text_subscriber_cb,
                         LV_EVENT_MSG_RECEIVED,
                         NULL);
-    lv_msg_subsribe_obj(MSG_NEW_ELEV, masl_label, (void *)"%04d");
+    lv_msg_subsribe_obj(MSG_NEW_ELEV, masl_label, (void *)"%d");
 
     ui_data_linetrough(main_p2);
     ui_toolbar_status(tv2);
@@ -235,6 +268,39 @@ void ui_begin()
     lv_obj_set_style_bg_color(p3_data, UI_BG_COLOR, 0);
     lv_obj_set_style_border_color(p3_data, UI_BG_COLOR, 0);
     lv_obj_clear_flag(p3_data, LV_OBJ_FLAG_SCROLLABLE);
+
+    // SMALL DATA
+    lv_obj_t *p3_data_small = lv_obj_create(main_p3);
+    lv_obj_set_size(p3_data_small, 200, 60);
+    lv_obj_align(p3_data_small, LV_ALIGN_TOP_MID, 0, -20);
+    lv_obj_set_style_bg_color(p3_data_small, UI_BG_COLOR, 0);
+    lv_obj_set_style_border_color(p3_data_small, UI_BG_COLOR, 0);
+    lv_obj_clear_flag(p3_data_small, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t *c3_label_s = lv_label_create(main_p3);
+    lv_obj_align(c3_label_s, LV_ALIGN_TOP_LEFT, 10, 30);
+    lv_obj_set_style_text_align(c3_label_s, LV_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(c3_label_s, &lv_font_montserrat_42, 0);
+    lv_label_set_text(c3_label_s, "NS");
+    lv_obj_set_style_text_color(c3_label_s, UI_FONT_COLOR, 0);
+    lv_obj_add_event_cb(c3_label_s,
+                        update_text_subscriber_cb,
+                        LV_EVENT_MSG_RECEIVED,
+                        NULL);
+    lv_msg_subsribe_obj(MSG_NEW_NESW, c3_label_s, (void *)"%s");
+
+    lv_obj_t *el_label_s = lv_label_create(p3_data_small);
+    lv_obj_align(el_label_s, LV_ALIGN_TOP_RIGHT, 0, -10);
+    lv_obj_set_style_text_align(el_label_s, LV_ALIGN_RIGHT_MID, 0);
+    lv_obj_set_style_text_font(el_label_s, &lv_font_montserrat_42, 0);
+    lv_label_set_text(el_label_s, "0000 m");
+    lv_obj_set_style_text_color(el_label_s, UI_FONT_COLOR, 0);
+    lv_obj_add_event_cb(el_label_s,
+                        update_text_subscriber_cb,
+                        LV_EVENT_MSG_RECEIVED,
+                        NULL);
+    lv_msg_subsribe_obj(MSG_NEW_ELEV, el_label_s, (void *)"%d m");
+    //END SMALL DATA
 
     lv_obj_t *vario_img = lv_img_create(main_p3);
     lv_obj_align(vario_img, LV_ALIGN_LEFT_MID, 10, 0);
@@ -310,22 +376,69 @@ void ui_begin()
     lv_obj_set_style_border_color(p4_data, UI_BG_COLOR, 0);
     lv_obj_clear_flag(p4_data, LV_OBJ_FLAG_SCROLLABLE);
 
+    // SMALL DATA
+    lv_obj_t *p4_data_small = lv_obj_create(main_p4);
+    lv_obj_set_size(p4_data_small, 200, 60);
+    lv_obj_align(p4_data_small, LV_ALIGN_TOP_MID, 0, -20);
+    lv_obj_set_style_bg_color(p4_data_small, UI_BG_COLOR, 0);
+    lv_obj_set_style_border_color(p4_data_small, UI_BG_COLOR, 0);
+    lv_obj_clear_flag(p4_data_small, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t *ms4_label_s = lv_label_create(p4_data_small);
+    lv_obj_align(ms4_label_s, LV_ALIGN_TOP_RIGHT, 0, -10);
+    lv_obj_set_style_text_align(ms4_label_s, LV_ALIGN_RIGHT_MID, 0);
+    lv_obj_set_style_text_font(ms4_label_s, &lv_font_montserrat_42, 0);
+    lv_label_set_text(ms4_label_s, "+1.2 m|s");
+    lv_obj_set_style_text_color(ms4_label_s, UI_FONT_COLOR, 0);
+    lv_obj_add_event_cb(ms4_label_s,
+                        update_text_subscriber_cb,
+                        LV_EVENT_MSG_RECEIVED,
+                        NULL);
+    lv_msg_subsribe_obj(MSG_NEW_VARIO_M, ms4_label_s, (void *)"%s m|s");
+
+    lv_obj_t *el4_label_s = lv_label_create(main_p4);
+    lv_obj_align(el4_label_s, LV_ALIGN_BOTTOM_MID, 0, 20);
+    lv_obj_set_style_text_align(el4_label_s, LV_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(el4_label_s, &lv_font_montserrat_42, 0);
+    lv_label_set_text(el4_label_s, "0000 m");
+    lv_obj_set_style_text_color(el4_label_s, UI_FONT_COLOR, 0);
+    lv_obj_add_event_cb(el4_label_s,
+                        update_text_subscriber_cb,
+                        LV_EVENT_MSG_RECEIVED,
+                        NULL);
+    lv_msg_subsribe_obj(MSG_NEW_ELEV, el4_label_s, (void *)"%d m");
+    //END SMALL DATA
+
+
     ui_data_linetrough(main_p4);
 
-    lv_obj_t *buss_label = lv_label_create(p4_data);
-    lv_obj_center(buss_label);
-    lv_obj_set_style_text_align(buss_label, LV_ALIGN_RIGHT_MID, 0);
-    lv_obj_set_style_text_font(buss_label, &font_alibaba, 0);
-    lv_label_set_text(buss_label, "000");
+    lv_obj_t *buss_label = lv_label_create(main_p4);
+    lv_obj_align(buss_label, LV_ALIGN_TOP_LEFT, 10, 30);
+    lv_obj_set_style_text_align(buss_label, LV_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(buss_label, &lv_font_montserrat_42, 0);
+    lv_label_set_text(buss_label, "NS");
     lv_obj_set_style_text_color(buss_label, UI_FONT_COLOR, 0);
     lv_obj_add_event_cb(buss_label,
                         update_text_subscriber_cb,
                         LV_EVENT_MSG_RECEIVED,
                         NULL);
-    lv_msg_subsribe_obj(MSG_NEW_BUSS_D, buss_label, (void *)"%03i");
+    lv_msg_subsribe_obj(MSG_NEW_NESW, buss_label, (void *)"%s");
+
+    lv_obj_t *buss_label_t = lv_label_create(p4_data);
+//    lv_obj_center(buss_label_t);
+    lv_obj_align(buss_label_t, LV_ALIGN_CENTER, 0, -5);
+    lv_obj_set_style_text_align(buss_label_t, LV_ALIGN_RIGHT_MID, 0);
+    lv_obj_set_style_text_font(buss_label_t, &font_alibaba, 0);
+    lv_label_set_text(buss_label_t, "000");
+    lv_obj_set_style_text_color(buss_label_t, UI_FONT_COLOR, 0);
+    lv_obj_add_event_cb(buss_label_t,
+                        update_text_subscriber_cb,
+                        LV_EVENT_MSG_RECEIVED,
+                        NULL);
+    lv_msg_subsribe_obj(MSG_NEW_BUSS_D, buss_label_t, (void *)"%03i");
 
     lv_obj_t *buss_img = lv_img_create(main_p4);
-    lv_obj_align(buss_img, LV_ALIGN_LEFT_MID, 0, 0);
+    lv_obj_align(buss_img, LV_ALIGN_LEFT_MID, 0, 30);
     lv_img_set_src(buss_img,&bussola);
     lv_obj_add_event_cb(buss_img,
                         update_rotation_buss_cb,
@@ -335,7 +448,7 @@ void ui_begin()
 
     lv_obj_t *buss_text = lv_label_create(main_p4);
     lv_obj_set_size(buss_text, elev_png.header.w, 220);
-    lv_obj_align(buss_text, LV_ALIGN_LEFT_MID, 28, 92);
+    lv_obj_align(buss_text, LV_ALIGN_LEFT_MID, 28, 122);
     lv_obj_set_style_text_align(buss_text, LV_ALIGN_CENTER, 0);
     lv_obj_set_style_text_font(buss_text, &lv_font_montserrat_28, 0);
     lv_label_set_recolor(buss_text,true);

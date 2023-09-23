@@ -369,13 +369,31 @@ void loop()
         lv_msg_send(MSG_NEW_BLE, &bleoff);
     }
 
+    if (status.GPS_course > 337.5f || status.GPS_course <= 22.5f){
+      strcpy(status.GPS_course_c,"N");
+    }else if(status.GPS_course > 22.5f && status.GPS_course <= 67.5f){
+      strcpy(status.GPS_course_c,"NE");
+    }else if(status.GPS_course > 67.5f && status.GPS_course <= 112.5f){
+      strcpy(status.GPS_course_c,"E");
+    }else if(status.GPS_course > 112.5f && status.GPS_course <= 157.5f){
+      strcpy(status.GPS_course_c,"SE");
+    }else if(status.GPS_course > -157.5f && status.GPS_course <= 202.5f){
+      strcpy(status.GPS_course_c,"S");
+    }else if(status.GPS_course > 202.5f && status.GPS_course <= 247.5f){
+      strcpy(status.GPS_course_c,"SW");
+    }else if(status.GPS_course > 247.5f && status.GPS_course <= 292.5f){
+      strcpy(status.GPS_course_c,"W");
+    }else if(status.GPS_course > 292.5f && status.GPS_course <= 337.5f){
+      strcpy(status.GPS_course_c,"NW");
+    }
+
 }
 
 void led_task(void *param)
 {
         pinMode(PIN_LED, OUTPUT);
         while (1) {
-            if (!status.BLE_connected){
+            if (!(status.baro_ok && status.GPS_Fix)){
                 digitalWrite(PIN_LED, 1);
                 delay(20);
                 digitalWrite(PIN_LED, 0);
@@ -527,24 +545,36 @@ void taskOledUpdate(void *param)
         uint32_t vda = abs(status.vario_dcm);
         lv_msg_send(MSG_NEW_VARIO, &vda);
 
+        char vm[20];
         int32_t vd = status.vario_dcm;
         if (vd>=0){
             lv_msg_send(MSG_NEW_VARIO_PM, &pv);
             lv_msg_send(MSG_NEW_BG_COLOR, &pbg);
+            strcpy(vm,"+");
         }else{
             lv_msg_send(MSG_NEW_VARIO_PM, &mv);
             lv_msg_send(MSG_NEW_BG_COLOR, &mbg);
+            strcpy(vm,"-");
         }
+        String vmc = String(abs(status.vario),1);
+        strcat(vm, vmc.c_str());
+        const char* vmp = vm;
+        lv_msg_send(MSG_NEW_VARIO_M, &vmp);
 
-        if (status.GPS_Fix){
+
+        if (status.GPS_Fix && status.GPS_sat >= status.min_sat_av){
           lv_msg_send(MSG_NEW_GPSFIX, &gpsfix);
-
           int32_t el = +status.GPS_alt;
           lv_msg_send(MSG_NEW_ELEV, &el);
+          char *course = status.GPS_course_c;
+          lv_msg_send(MSG_NEW_NESW,&course);
+
         }else{
           lv_msg_send(MSG_NEW_GPSFIX, &gpsnofix);
           int32_t el = int(status.altitude);
           lv_msg_send(MSG_NEW_ELEV, &el);
+          const char *course = "fix";
+          lv_msg_send(MSG_NEW_NESW,&course);
         }
 
         if (status.baro_ok) lv_msg_send(MSG_NEW_BARO,&barook);
