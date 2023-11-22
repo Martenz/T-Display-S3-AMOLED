@@ -22,12 +22,17 @@ def copy_file(*args, **kwargs):
     print(version)
     if filename == "firmware.bin":
         savefile = 'firmware/firmware_{}_{}.bin'.format(version,platform)
+        savelatest = 'firmware/latest_firmware.bin'
     elif filename == "spiffs.bin":
         savefile = 'firmware/spiffs_{}.bin'.format(version)
+        savelatest = 'firmware/latest_spiffs.bin'
     else:
         savefile = 'firmware/{}'.format(filename)
+        savelatest = 'firmware/latest_{}'.format(filename)
+
     print("********  copy file " + target + " to " + savefile + " *******")
     copyfile(target, savefile)
+    copyfile(target, savelatest)
     f = open("firmware/_version.txt", "w")
     f.write(version)
     f.close()
