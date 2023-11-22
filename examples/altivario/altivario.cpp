@@ -9,6 +9,10 @@
 #include "tzi_gui.h"
 #include "ble.h"
 
+#include <WiFi.h>
+#include <WebServer.h>
+#include <tz_wifi.h>
+
 #include <TinyGPS++.h>
 #include <SoftwareSerial.h>
 #include "ubloxConfigSentences.h"
@@ -191,9 +195,6 @@ void setup()
     disp_drv.draw_buf = &draw_buf;
     lv_disp_drv_register(&disp_drv);
    
-    // WIFI 
-    // WIFI ---
-
     ui_begin();
 
     // BUTTONS
@@ -223,8 +224,11 @@ void setup()
             status.wifi_on = !status.wifi_on;
             if (status.wifi_on){
                 lv_msg_send(MSG_NEW_WIFI, &wfon);
+                TzWifiBegin();
+
             }else{
                 lv_msg_send(MSG_NEW_WIFI, &wfoff);
+                TzWifiOff();
             }
         }
     );
@@ -298,12 +302,14 @@ void loop()
         }
         lv_msg_send(MSG_NEW_BATTERY, &nb);
 
-//        lv_msg_send(MSG_NEW_VOLT, &volt);
+        lv_msg_send(MSG_NEW_VOLT, &volt_avg);
 
         last_tick = millis();
     }
 
-
+    if (status.wifi_on){
+      HandleMyClients();
+    }
 
     // temporary fake setup done - all sensors ok - fake data
     // if (last_tick > 5000 & (!status.baro_ok)){
@@ -568,13 +574,16 @@ void taskOledUpdate(void *param)
           lv_msg_send(MSG_NEW_ELEV, &el);
           char *course = status.GPS_course_c;
           lv_msg_send(MSG_NEW_NESW,&course);
-
+          uint32_t nsat = status.GPS_sat;
+          lv_msg_send(MSG_NEW_NSAT, &nsat);
         }else{
           lv_msg_send(MSG_NEW_GPSFIX, &gpsnofix);
           int32_t el = int(status.altitude);
           lv_msg_send(MSG_NEW_ELEV, &el);
           const char *course = "fix";
           lv_msg_send(MSG_NEW_NESW,&course);
+          uint32_t nsat = 0;
+          lv_msg_send(MSG_NEW_NSAT, &nsat);
         }
 
         if (status.baro_ok) lv_msg_send(MSG_NEW_BARO,&barook);

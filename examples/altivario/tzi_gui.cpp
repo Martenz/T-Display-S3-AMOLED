@@ -178,6 +178,24 @@ void ui_begin()
     lv_gif_set_src(logo_img, &tzi);
     ui_toolbar_status(tv1);
 
+    lv_obj_t *bat_label = lv_label_create(tv1);
+    lv_obj_align(bat_label, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+    lv_obj_set_style_text_font(bat_label, &lv_font_montserrat_28, 0);
+    lv_obj_add_event_cb(bat_label,
+                        update_text_subscriber_cb,
+                        LV_EVENT_MSG_RECEIVED,
+                        NULL);
+    lv_msg_subsribe_obj(MSG_NEW_VOLT, bat_label, (void *)"%d mV");
+
+    lv_obj_t *nsat_label = lv_label_create(tv1);
+    lv_obj_align(nsat_label, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
+    lv_obj_set_style_text_font(nsat_label, &lv_font_montserrat_28, 0);
+    lv_obj_add_event_cb(nsat_label,
+                        update_text_subscriber_cb,
+                        LV_EVENT_MSG_RECEIVED,
+                        NULL);
+    lv_msg_subsribe_obj(MSG_NEW_NSAT, nsat_label, (void *)"%d sat");
+
     /* page 2 */
     // main container
     lv_obj_t *main_p2 = lv_obj_create(tv2);
@@ -425,7 +443,6 @@ void ui_begin()
     lv_msg_subsribe_obj(MSG_NEW_NESW, buss_label, (void *)"%s");
 
     lv_obj_t *buss_label_t = lv_label_create(p4_data);
-//    lv_obj_center(buss_label_t);
     lv_obj_align(buss_label_t, LV_ALIGN_CENTER, 0, -5);
     lv_obj_set_style_text_align(buss_label_t, LV_ALIGN_RIGHT_MID, 0);
     lv_obj_set_style_text_font(buss_label_t, &font_alibaba, 0);

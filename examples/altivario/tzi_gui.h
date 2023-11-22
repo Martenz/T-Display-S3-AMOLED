@@ -26,6 +26,7 @@
 #define MSG_NEW_BARO 15
 #define MSG_NEW_VARIO_M 16
 #define MSG_NEW_NESW 17
+#define MSG_NEW_NSAT 18
 
 #define LV_DELAY(x)                                                                                                                                  \
   do {                                                                                                                                               \
