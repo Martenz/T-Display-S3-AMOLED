@@ -1,16 +1,4 @@
-/*!
- * @file tzi_gui.h
- *
- *
- */
-
-/*
-*/
-
 #pragma once
-
-#ifndef __TZI_GUI_H__
-#define __TZI_GUI_H__
 
 #include "Arduino.h"
 
@@ -34,6 +22,11 @@
 #define MSG_NEW_BUSS 11
 #define MSG_NEW_BUSS_D 12
 #define MSG_NEW_BG_COLOR 13
+#define MSG_NEW_GPSFIX 14
+#define MSG_NEW_BARO 15
+#define MSG_NEW_VARIO_M 16
+#define MSG_NEW_NESW 17
+#define MSG_NEW_NSAT 18
 
 #define LV_DELAY(x)                                                                                                                                  \
   do {                                                                                                                                               \
@@ -48,6 +41,4 @@ void ui_begin();
 void ui_switch_page(void);
 void ui_switch_page_up(void);
 void ui_switch_page_down(void);
-void ui_gotomain_page(void);
-
-#endif
+void ui_gotomain_page(uint8_t);
