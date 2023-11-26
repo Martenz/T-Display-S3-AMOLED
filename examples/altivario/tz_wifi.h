@@ -24,7 +24,7 @@ extern struct statusData status;
 #define TZWIFIAPSSID "Tz_S3OLED_AP"
 #define TZWIFIAPSSIDPSW NULL
 
-#define VERSIONCHECKURL "https://raw.githubusercontent.com/Martenz/T-Display-S3-AMOLED/tzi/altivario/firmware/version.txt"
+#define VERSIONCHECKURL "https://raw.githubusercontent.com/Martenz/T-Display-S3-AMOLED/tzi/altivario/firmware/version.json"
 #define DOWNLOADURL "https://github.com/Martenz/T-Display-S3-AMOLED/raw/tzi/altivario/firmware/latest_firmware.bin"
 
 String httpGETRequest(const char* serverName);
