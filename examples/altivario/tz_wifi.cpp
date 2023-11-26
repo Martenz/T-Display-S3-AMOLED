@@ -52,15 +52,28 @@ String httpGETRequest(const char* serverName) {
 
 void handle_OnConnect() {
   // call to check latest firmware version
+  String api_get = httpGETRequest(VERSIONCHECKURL);
+  JSONVar myObject = JSON.parse(api_get);
+  JSONVar keys = myObject.keys();
+  //JSONVar value = myObject["datetime"];
+  //wifi_date = JSON.stringify(value);
+  const char* ver = myObject["version"];
+  String latest_ver = ver;
+  log_i("Latest built version: %s", latest_ver.c_str());
 
-  server.send(200, "text/html", SendHTML(true)); 
+  if (latest_ver.toInt() > status.firmware_v.toInt()){
+    server.send(200, "text/html", SendHTML(true,latest_ver)); 
+  }else{
+    server.send(200, "text/html", SendHTML(false, status.firmware_v)); 
+  }
+
 }
 
 void handle_NotFound(){
   server.send(404, "text/plain", "Not found");
 }
 
-String SendHTML(bool update){
+String SendHTML(bool update, String version){
   String ptr = "<!DOCTYPE html> <html>\n";
   ptr +="<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n";
   ptr +="<title>TzInstruments</title>\n";
@@ -82,12 +95,16 @@ String SendHTML(bool update){
   ptr += wifi_date;
   ptr += "</p>";
 
-  if (update==true){
-    ptr += "<p>Updated to latest Version: <button class=\"button button-off\" disabled>";
+  if (update==false){
+    ptr += "<p>Updated to latest Version: <b>";
     ptr += status.firmware_v;
-    ptr += "</button></p>";
+    ptr += "</b></p>";
   }else{
-    ptr +="<p>Update</p><a class=\"button button-on\" href=\"/led1off\">UPDATE Firmware</a>";
+    ptr += "<p>You are running on an old version: <b>";
+    ptr += status.firmware_v;
+    ptr += "</b>\nUpdate to latest available <b>";
+    ptr += version;
+    ptr += "</b></p><a class=\"button button-on\" href=\"/led1off\">UPDATE Firmware</a>";
   }
 
   ptr +="</body>\n";
