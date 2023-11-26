@@ -1,5 +1,4 @@
-#include <Arduino.h>
-#include <tz_wifi.h>
+#include "tz_wifi.h"
 
 const char* wifi_network_ssid     = TZWIFINETSSID;
 const char* wifi_network_password =  TZWIFINETSSIDPSW;
@@ -52,20 +51,22 @@ String httpGETRequest(const char* serverName) {
 }
 
 void handle_OnConnect() {
-  server.send(200, "text/html", SendHTML(0,0)); 
+  // call to check latest firmware version
+
+  server.send(200, "text/html", SendHTML(true)); 
 }
 
 void handle_NotFound(){
   server.send(404, "text/plain", "Not found");
 }
 
-String SendHTML(uint8_t led1stat,uint8_t led2stat){
+String SendHTML(bool update){
   String ptr = "<!DOCTYPE html> <html>\n";
   ptr +="<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n";
   ptr +="<title>TzInstruments</title>\n";
   ptr +="<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}\n";
   ptr +="body{margin-top: 50px;} h1 {color: #444444;margin: 50px auto 30px;} h3 {color: #444444;margin-bottom: 50px;}\n";
-  ptr +=".button {display: block;width: 80px;background-color: #3498db;border: none;color: white;padding: 13px 30px;text-decoration: none;font-size: 25px;margin: 0px auto 35px;cursor: pointer;border-radius: 4px;}\n";
+  ptr +=".button {display: block;background-color: #3498db;border: none;color: white;padding: 13px 30px;text-decoration: none;font-size: 25px;margin: 0px auto 35px;cursor: pointer;border-radius: 4px;}\n";
   ptr +=".button-on {background-color: #3498db;}\n";
   ptr +=".button-on:active {background-color: #2980b9;}\n";
   ptr +=".button-off {background-color: #34495e;}\n";
@@ -74,22 +75,20 @@ String SendHTML(uint8_t led1stat,uint8_t led2stat){
   ptr +="</style>\n";
   ptr +="</head>\n";
   ptr +="<body>\n";
-  ptr +="<h1>TzInstruments Web Server</h1>\n";
+  ptr +="<h1>TzInstruments Configurator</h1>\n";
   ptr +="<h3>Using Access Point(AP) Mode</h3>\n";
   
   ptr += "<p>Current date: ";
   ptr += wifi_date;
   ptr += "</p>";
 
-   if(led1stat)
-  {ptr +="<p>LED1 Status: ON</p><a class=\"button button-off\" href=\"/led1off\">OFF</a>\n";}
-  else
-  {ptr +="<p>LED1 Status: OFF</p><a class=\"button button-on\" href=\"/led1on\">ON</a>\n";}
-
-  if(led2stat)
-  {ptr +="<p>LED2 Status: ON</p><a class=\"button button-off\" href=\"/led2off\">OFF</a>\n";}
-  else
-  {ptr +="<p>LED2 Status: OFF</p><a class=\"button button-on\" href=\"/led2on\">ON</a>\n";}
+  if (update==true){
+    ptr += "<p>Updated to latest Version: <button class=\"button button-off\" disabled>";
+    ptr += status.firmware_v;
+    ptr += "</button></p>";
+  }else{
+    ptr +="<p>Update</p><a class=\"button button-on\" href=\"/led1off\">UPDATE Firmware</a>";
+  }
 
   ptr +="</body>\n";
   ptr +="</html>\n";

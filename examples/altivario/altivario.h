@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __ALTIVARIO_H__
+#define __ALTIVARIO_H__
 
 #include <Arduino.h>
 
@@ -15,10 +16,10 @@
 
 #define VPARRAYSIZE 8
 
-
 struct statusData{
 
     uint32_t chipId;
+    String firmware_v = "";
     uint8_t mainpage = 2;
     bool lowPower = false;
     
@@ -74,45 +75,4 @@ struct statusData{
 
 };
 
-bool gotomainpage = true;
-uint8_t bat_idx=4;
-uint8_t vol_idx=2;
-
-char* volumes[3] = {   
-    "#4f0a4f \xEF\x80\xA6#", // LV_SYMBOL_MUTE
-    "#ff00ff \xEF\x80\xA7#", // LV_SYMBOL_VOLUME_MID
-    "#ff00ff \xEF\x80\xA8#",  // LV_SYMBOL_VOLUME_MAX
-};
-
-const char* barook = "#ff00ff \xEF\x80\x8C#";
-const char* baroko = "#4f0a4f \xEF\x80\x8C#";
-
-const char* wfon = "#ff00ff \xEF\x87\xAB#";
-const char* wfoff = "#4f0a4f \xEF\x87\xAB#";
-
-const char* bleon = "#ff00ff \xEF\x8a\x93#";
-const char* bleoff = "#4f0a4f \xEF\x8a\x93#";
-
-const char* gpsfix = "#ff00ff \xEF\x84\xA4#";
-const char* gpsnofix = "#4f0a4f \xEF\x84\xA4#";
-
-const char* pv = "#d5ff03 \xEF\x81\xA7#";
-const int pbg = 0x5d750c;
-const char* mv = "#ff1900 \xEF\x81\xA8#";
-const int mbg = 0xb51919;
-
-void led_task(void *param);
-void taskBaro(void *param);
-void taskBluetooth(void *param);
-void taskGPSU7(void *param);
-void taskOledUpdate(void *param);
-
-void resetUBX();
-void changeGpsHz();
-void setSentences();
-
-TaskHandle_t xHandleBluetooth = NULL;
-TaskHandle_t xHandleGPSU7 = NULL;
-
-void sendUBX(const unsigned char *progmemBytes, size_t len );
-
+#endif

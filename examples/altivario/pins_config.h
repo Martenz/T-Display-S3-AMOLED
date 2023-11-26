@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __PINS_CONFIG_H__
+#define __PINS_CONFIG_H__
 
 /***********************config*************************/
 #define LCD_USB_QSPI_DREVER   1
@@ -53,3 +54,5 @@
 
 #define PIN_BUTTON_1          0
 #define PIN_BUTTON_2          21
+
+#endif

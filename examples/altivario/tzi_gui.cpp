@@ -1,6 +1,4 @@
 #include "tzi_gui.h"
-#include "Arduino.h"
-#include "lvgl.h"
 
 // TO ENABLE DEFAULT FONTS edit lv_config.h and enable specific font size
 // eg. #define LV_FONT_MONTSERRAT_28 1

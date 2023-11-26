@@ -1,6 +1,19 @@
-#pragma once
+/*!
+ * @file tzi_gui.h
+ *
+ *
+ */
+
+/**/
+
+extern struct statusData status;
+
+#ifndef __TZI_GUI_H__
+#define __TZI_GUI_H__
 
 #include "Arduino.h"
+#include "Arduino.h"
+#include "lvgl.h"
 
 #define UI_BG_COLOR    lv_color_black()
 #define UI_FRAME_COLOR lv_color_hex(0x282828)
@@ -42,3 +55,5 @@ void ui_switch_page(void);
 void ui_switch_page_up(void);
 void ui_switch_page_down(void);
 void ui_gotomain_page(uint8_t);
+
+#endif

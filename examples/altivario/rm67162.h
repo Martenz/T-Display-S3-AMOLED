@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __RM67162_H__
+#define __RM67162_H__
 
 #include "stdint.h"
 #include "pins_config.h"
@@ -52,3 +53,5 @@ void lcd_PushColors(uint16_t x,
                     uint16_t *data);
 void lcd_PushColors(uint16_t *data, uint32_t len);
 void lcd_sleep();
+
+#endif

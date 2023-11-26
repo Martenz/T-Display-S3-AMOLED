@@ -1,6 +1,7 @@
 extern struct statusData status;
 
-#pragma once
+#ifndef __BLE_H__
+#define __BLE_H__
 
 #include <Arduino.h>
 #include <esp_coexist.h>
@@ -136,3 +137,5 @@ void stop_ble (){
     esp_bt_controller_disable();
     esp_bt_controller_mem_release(ESP_BT_MODE_BTDM);
 };
+
+#endif

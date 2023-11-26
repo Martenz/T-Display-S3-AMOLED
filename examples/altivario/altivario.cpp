@@ -1,5 +1,6 @@
 #include <Arduino.h>
-#include "altivario.h"
+#include <altivario.h>
+#include "SPIFFS.h"
 #include "OneButton.h" /* https://github.com/mathertel/OneButton.git */
 #include "lvgl.h"      /* https://github.com/lvgl/lvgl.git */
 
@@ -47,6 +48,50 @@ uint8_t percentages[VPARRAYSIZE] = {  0,  20,  50,  80,  95,  98,   99, 100 };
 #ifndef BOARD_HAS_PSRAM
 #error "Detected that PSRAM is not turned on. Please set PSRAM to OPI PSRAM in ArduinoIDE"
 #endif
+
+// init variables and functions
+
+bool gotomainpage = true;
+uint8_t bat_idx=4;
+uint8_t vol_idx=2;
+
+char* volumes[3] = {   
+    "#4f0a4f \xEF\x80\xA6#", // LV_SYMBOL_MUTE
+    "#ff00ff \xEF\x80\xA7#", // LV_SYMBOL_VOLUME_MID
+    "#ff00ff \xEF\x80\xA8#",  // LV_SYMBOL_VOLUME_MAX
+};
+
+const char* barook = "#ff00ff \xEF\x80\x8C#";
+const char* baroko = "#4f0a4f \xEF\x80\x8C#";
+
+const char* wfon = "#ff00ff \xEF\x87\xAB#";
+const char* wfoff = "#4f0a4f \xEF\x87\xAB#";
+
+const char* bleon = "#ff00ff \xEF\x8a\x93#";
+const char* bleoff = "#4f0a4f \xEF\x8a\x93#";
+
+const char* gpsfix = "#ff00ff \xEF\x84\xA4#";
+const char* gpsnofix = "#4f0a4f \xEF\x84\xA4#";
+
+const char* pv = "#d5ff03 \xEF\x81\xA7#";
+const int pbg = 0x5d750c;
+const char* mv = "#ff1900 \xEF\x81\xA8#";
+const int mbg = 0xb51919;
+
+void led_task(void *param);
+void taskBaro(void *param);
+void taskBluetooth(void *param);
+void taskGPSU7(void *param);
+void taskOledUpdate(void *param);
+
+void resetUBX();
+void changeGpsHz();
+void setSentences();
+
+TaskHandle_t xHandleBluetooth = NULL;
+TaskHandle_t xHandleGPSU7 = NULL;
+
+void sendUBX(const unsigned char *progmemBytes, size_t len );
 
 RTC_DATA_ATTR int bootCount = 0;
 
@@ -143,12 +188,12 @@ void setup()
 
     Serial.begin(115200);
 
-    delay(1000);
+    delay(2000);
     ++bootCount;
-    Serial.println("T-DISPLAY-S3-AMOLED FACTORY TEST");
+    log_i("T-DISPLAY-S3-AMOLED FACTORY TEST");
     pinMode(PIN_BAT_VOLT, ANALOG);
 
-    Serial.println("Boot number: " + String(bootCount));
+    log_i("Boot number: %s" ,String(bootCount));
     //Print the wakeup reason for ESP32
     print_wakeup_reason();
 
@@ -156,12 +201,30 @@ void setup()
     for(int i=0; i<17; i=i+8) {
       chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
     }
-    Serial.printf("ESP32 Chip model = %s Rev %d\n", ESP.getChipModel(), ESP.getChipRevision());
-    Serial.printf("This chip has %d cores\n", ESP.getChipCores());
-    Serial.print("Chip ID: "); 
-    Serial.println(chipId);
+    log_i("ESP32 Chip model = %s Rev %d", ESP.getChipModel(), ESP.getChipRevision());
+    log_i("This chip has %d cores\n", ESP.getChipCores());
+    log_i("Chip ID: %i",chipId); 
 
     status.chipId = chipId;
+
+    // check version
+    if(!SPIFFS.begin(true)){
+      log_e("An Error has occurred while mounting SPIFFS");
+    }else{
+      File file = SPIFFS.open("/version.txt");
+      if(!file){
+        log_e("Failed to open file for reading");
+      }else{
+        String fileContent;
+        while(file.available()){
+          fileContent += String((char)file.read());
+        }
+        log_i("Firmware Version: %s", fileContent.c_str());
+        status.firmware_v = fileContent;
+        file.close();
+      }
+    }
+
     delay(50);
 
     pinMode(GPSRXPIN,INPUT);
@@ -283,7 +346,7 @@ void loop()
         status.batterymV = volt_avg; 
         status.battery = getBatteryPerc();
         // TEST
-        log_i("Volt read average (kalman): %.f",status.batterymV);
+        //log_i("Volt read average (kalman): %.f",status.batterymV);
         char* nb = battery[4];
         if (volt_avg>=uint32_t(4200)){
             nb = battery[6];
