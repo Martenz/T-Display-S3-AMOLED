@@ -19,7 +19,7 @@
 struct statusData{
 
     uint32_t chipId;
-    String firmware_v = "";
+    uint16_t firmware_v = 0;
     uint8_t mainpage = 2;
     bool lowPower = false;
     

@@ -14,6 +14,7 @@ extern struct statusData status;
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WebServer.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
 
@@ -24,10 +25,11 @@ extern struct statusData status;
 #define TZWIFIAPSSID "Tz_S3OLED_AP"
 #define TZWIFIAPSSIDPSW NULL
 
-#define VERSIONCHECKURL "https://raw.githubusercontent.com/Martenz/T-Display-S3-AMOLED/tzi/altivario/firmware/version.json"
+#define WORLDDATETIME "https://worldtimeapi.org/api/timezone/Europe/Rome"
+#define VERSIONCHECKURL "https://github.com/Martenz/T-Display-S3-AMOLED/raw/tzi/altivario/firmware/version.json"
 #define DOWNLOADURL "https://github.com/Martenz/T-Display-S3-AMOLED/raw/tzi/altivario/firmware/latest_firmware.bin"
 
-String httpGETRequest(const char* serverName);
+String httpsGETRequest(const char* serverName);
 String SendHTML(bool update, String version);
 
 void TzWifiBegin();

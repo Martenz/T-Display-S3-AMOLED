@@ -211,7 +211,7 @@ void setup()
     if(!SPIFFS.begin(true)){
       log_e("An Error has occurred while mounting SPIFFS");
     }else{
-      File file = SPIFFS.open("/version.txt");
+      File file = SPIFFS.open("/version.json");
       if(!file){
         log_e("Failed to open file for reading");
       }else{
@@ -219,8 +219,13 @@ void setup()
         while(file.available()){
           fileContent += String((char)file.read());
         }
-        log_i("Firmware Version: %s", fileContent.c_str());
-        status.firmware_v = fileContent;
+        JSONVar myObject = JSON.parse(fileContent);
+        JSONVar keys = myObject.keys();
+        //JSONVar value = myObject["datetime"];
+        //wifi_date = JSON.stringify(value);
+        uint16_t ver = myObject["version"];
+        status.firmware_v = ver;
+        log_i("Firmware Version: %i", status.firmware_v);
         file.close();
       }
     }
@@ -673,7 +678,7 @@ void taskBluetooth(void *param) {
           // Serial.println(ble_name);
           start_ble(ble_name);
           status.ble_init = true;
-          log_i("BLE is ON, configured : %s",ble_name);
+          log_i("BLE is ON, configured : %s",ble_name.c_str());
  //         delay(2000);
         }else{
 

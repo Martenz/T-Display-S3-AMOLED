@@ -20,51 +20,61 @@ String wifi_date = "-";
 // IPAddress subnet(255,255,255,0);
 WebServer server(80);
 
-String httpGETRequest(const char* serverName) {
-  WiFiClient client;
-  HTTPClient http;
+String httpsGETRequest(const char* serverName) {
+  //WiFiClient client;
+  WiFiClientSecure client;// = new WiFiClientSecure;
+  //HTTPClient http;
+  HTTPClient https;
     
   // Your Domain name with URL path or IP address with path
-  http.begin(client, serverName);
-  http.addHeader("accept", "application/json");
+  // http.begin(client, serverName);
+  // http.addHeader("accept", "application/json");
+  client.setInsecure();
+  https.begin(client, serverName);
+  https.addHeader("accept", "application/json");
+  https.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
       
   // If you need Node-RED/server authentication, insert user and password below
   //http.setAuthorization("REPLACE_WITH_SERVER_USERNAME", "REPLACE_WITH_SERVER_PASSWORD");
   
   // Send HTTP GET request
-  int httpResponseCode = http.GET();
+  // int httpResponseCode = http.GET();
+  int httpResponseCode = https.GET();
 
   String payload = "{}"; 
   
   if (httpResponseCode>0) {
     log_i("HTTP Response code: %i", httpResponseCode);
-    payload = http.getString();
+    // payload = http.getString();
+    payload = https.getString();
   }
   else {
     log_i("Error code: %i", httpResponseCode);
     Serial.println(httpResponseCode);
   }
   // Free resources
-  http.end();
+  // http.end();
+  https.end();
+
+  client.stop();
 
   return payload;
 }
 
 void handle_OnConnect() {
   // call to check latest firmware version
-  String api_get = httpGETRequest(VERSIONCHECKURL);
+  String api_get = httpsGETRequest(VERSIONCHECKURL);
   JSONVar myObject = JSON.parse(api_get);
   JSONVar keys = myObject.keys();
   //JSONVar value = myObject["datetime"];
   //wifi_date = JSON.stringify(value);
-  const char* ver = myObject["version"];
-  String latest_ver = ver;
-  log_i("Latest built version: %s", latest_ver.c_str());
-
-  if (latest_ver.toInt() > status.firmware_v.toInt()){
-    server.send(200, "text/html", SendHTML(true,latest_ver)); 
+  uint16_t ver = myObject["version"];
+  log_i("Latest built version: %i", ver);
+  
+  if (ver > status.firmware_v){
+    server.send(200, "text/html", SendHTML(true,String(ver))); 
   }else{
-    server.send(200, "text/html", SendHTML(false, status.firmware_v)); 
+    server.send(200, "text/html", SendHTML(false, String(status.firmware_v))); 
   }
 
 }
@@ -166,7 +176,7 @@ void HandleMyClients(){
         //Check WiFi connection status
         if(WiFi.status()== WL_CONNECTED){
 
-            String api_get = httpGETRequest("http://worldtimeapi.org/api/timezone/Europe/Rome");
+            String api_get = httpsGETRequest(WORLDDATETIME);
             JSONVar myObject = JSON.parse(api_get);
             JSONVar keys = myObject.keys();
             //JSONVar value = myObject["datetime"];
