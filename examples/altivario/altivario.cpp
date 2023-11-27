@@ -404,6 +404,10 @@ void setup()
 
     delay(50);
 
+    loadConfiguration();
+
+    delay(50);
+
     pinMode(GPSRXPIN,INPUT);
     pinMode(GPSTXPIN,OUTPUT);
     ss.begin(GPSBAUD);

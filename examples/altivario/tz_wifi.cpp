@@ -112,6 +112,7 @@ void updateFirmware(uint8_t *data, size_t len){
   Update.end(true);
   log_i("\nUpdate Success, Total Size: %u\nRebooting...\n", currentLength);
 
+  server.sendHeader("Location", "/",true);  
   server.send(200, "text/html", SendHTML(true,"Restarting...",true)); 
   delay(1000);
   // Restart ESP32 to see changes 
