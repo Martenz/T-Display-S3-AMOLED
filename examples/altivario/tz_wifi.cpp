@@ -113,7 +113,7 @@ void handle_OnUpdate(){
   HTTPClient https;
     
   client.setInsecure();
-  client.setTimeout(12000 / 1000);
+  client.setTimeout(60);
   httpUpdate.rebootOnUpdate(false); // remove automatic update
   https.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
 
@@ -126,6 +126,7 @@ void handle_OnUpdate(){
       log_e("HTTP_UPDATE_FAILD Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
       log_i("Retry in 10secs!");
       delay(10000); // Wait 10secs
+      server.send(200, "text/html", SendHTML(true,"Retry",false));
       break;
 
     case HTTP_UPDATE_NO_UPDATES:
@@ -244,7 +245,7 @@ void HandleMyClients(){
 
     if ((millis() - lastTime) > timerDelay) {
         //Check WiFi connection status
-        if(WiFi.status()== WL_CONNECTED){
+        if(WiFi.status()== WL_CONNECTED & status.updating != true){
 
             String api_get = httpsGETRequest(WORLDDATETIME);
             JSONVar myObject = JSON.parse(api_get);
