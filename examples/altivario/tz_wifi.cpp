@@ -100,48 +100,76 @@ void setClock() {
   log_i("Current time: %s",asctime(&timeinfo));
 }
  
+// Function to update firmware incrementally
+// Buffer is declared to be 128 so chunks of 128 bytes
+// from firmware is written to device until server closes
+void updateFirmware(uint8_t *data, size_t len){
+  Update.write(data, len);
+  currentLength += len;
+  // Print dots while waiting for update to finish
+  // if current length of written firmware is not equal to total firmware size, repeat
+  if(currentLength != totalLength) return;
+  Update.end(true);
+  log_i("\nUpdate Success, Total Size: %u\nRebooting...\n", currentLength);
+  // Restart ESP32 to see changes 
+  ESP.restart();
+}
 
 void handle_OnUpdate(){
 
   server.send(200, "text/html", SendHTML(true,"Updating...",true)); 
-
   setClock();
-  
+
   //WiFiClient client;
   WiFiClientSecure client;// = new WiFiClientSecure;
   //HTTPClient http;
   HTTPClient https;
     
+  // Your Domain name with URL path or IP address with path
+  // http.begin(client, serverName);
+  // http.addHeader("accept", "application/json");
   client.setInsecure();
-  client.setTimeout(60);
-  httpUpdate.rebootOnUpdate(false); // remove automatic update
+  https.addHeader("accept", "*/*");
   https.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+  https.begin(client, DOWNLOADURL);
+      
+  // If you need Node-RED/server authentication, insert user and password below
+  //http.setAuthorization("REPLACE_WITH_SERVER_USERNAME", "REPLACE_WITH_SERVER_PASSWORD");
+  
+  // Send HTTP GET request
+  // int httpResponseCode = http.GET();
+  int httpResponseCode = https.GET();
 
-  log_i("Update start now!");
-     
-  t_httpUpdate_return ret = httpUpdate.update(client, DOWNLOADURL, VERSION);
-
-  switch (ret) {
-    case HTTP_UPDATE_FAILED:
-      log_e("HTTP_UPDATE_FAILD Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
-      log_i("Retry in 10secs!");
-      delay(10000); // Wait 10secs
-      server.send(200, "text/html", SendHTML(true,"Retry",false));
-      break;
-
-    case HTTP_UPDATE_NO_UPDATES:
-      log_i("HTTP_UPDATE_NO_UPDATES");
-      break;
-
-    case HTTP_UPDATE_OK:
-      log_i("HTTP_UPDATE_OK");
-      server.send(200, "text/html", SendHTML(true,"Restarting...",true)); 
-
-      delay(3000); // Wait 3 second and restart
-      ESP.restart();
-      break;
+  // If file is reachable, start downloading
+  if(httpResponseCode > 0){
+      // get length of document (is -1 when Server sends no Content-Length header)
+      totalLength = https.getSize();
+      // transfer to local variable
+      int len = totalLength;
+      // this is required to start firmware update process
+      Update.begin(UPDATE_SIZE_UNKNOWN);
+      log_i("FW Size: %u\n",totalLength);
+      // create buffer for read
+      uint8_t buff[128] = { 0 };
+      // get tcp stream
+      WiFiClient * stream = https.getStreamPtr();
+      // read all data from server
+      log_i("Updating firmware...");
+      while(https.connected() && (len > 0 || len == -1)) {
+           // get available data size
+           size_t size = stream->available();
+           if(size) {
+              // read up to 128 byte
+              int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
+              // pass to function
+              updateFirmware(buff, c);
+              if(len > 0) {
+                 len -= c;
+              }
+           }
+           delay(1);
+      }
   }
-  delay(10000);
 }
 
 void handle_NotFound(){

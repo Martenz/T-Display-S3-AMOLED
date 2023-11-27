@@ -12,11 +12,11 @@ extern struct statusData status;
 #define __TZ_WIFI_H__
 
 #include <Arduino.h>
+#include <Update.h>
 #include <WiFi.h>
 #include <WebServer.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
-#include <HTTPUpdate.h>
 #include <Arduino_JSON.h>
 #include <time.h>
 
