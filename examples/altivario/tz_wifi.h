@@ -16,8 +16,9 @@ extern struct statusData status;
 #include <WebServer.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
+#include <HTTPUpdate.h>
 #include <Arduino_JSON.h>
-#include <Update.h>
+#include <time.h>
 
 #include "altivario.h"
 
