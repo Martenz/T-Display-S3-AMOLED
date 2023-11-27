@@ -111,12 +111,16 @@ void updateFirmware(uint8_t *data, size_t len){
   if(currentLength != totalLength) return;
   Update.end(true);
   log_i("\nUpdate Success, Total Size: %u\nRebooting...\n", currentLength);
+
+  server.send(200, "text/html", SendHTML(true,"Restarting...",true)); 
+  delay(1000);
   // Restart ESP32 to see changes 
   ESP.restart();
 }
 
 void handle_OnUpdate(){
-
+  server.sendHeader("Location", "/",true);  
+  server.send(302, "text/plain", "");
   server.send(200, "text/html", SendHTML(true,"Updating...",true)); 
   setClock();
 
