@@ -114,7 +114,7 @@ void updateFirmware(uint8_t *data, size_t len){
 
   server.sendHeader("Location", "/",true);  
   server.send(200, "text/html", SendHTML(true,"Restarting...",true)); 
-  delay(1000);
+  delay(5000);
   // Restart ESP32 to see changes 
   ESP.restart();
 }
@@ -218,6 +218,8 @@ String SendHTML(bool update, String version, bool updating){
       ptr += "</b></p><a class=\"button button-on\" href=\"/update\">UPDATE Firmware</a>";
     }
   }
+
+  ptr += "<p><a href=\"/\">Return to main page</a><p>";
 
   ptr +="</body>\n";
   ptr +="</html>\n";
