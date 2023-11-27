@@ -182,6 +182,7 @@ void ui_begin()
     lv_obj_set_style_text_font(firmware_text, &lv_font_montserrat_28, 0);
     lv_label_set_recolor(firmware_text,true);
     String fver =  "v."+String(status.firmware_v);
+    if (status.settings_loaded) fver += " - s";
     lv_label_set_text(firmware_text, fver.c_str());
     lv_obj_set_style_text_color(firmware_text, UI_FONT_COLOR, 0);
 

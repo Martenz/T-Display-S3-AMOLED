@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <altivario.h>
+#include "melodies.h"
+
 #include "SPIFFS.h"
 #include "OneButton.h" /* https://github.com/mathertel/OneButton.git */
 #include "lvgl.h"      /* https://github.com/lvgl/lvgl.git */
@@ -55,11 +57,13 @@ bool gotomainpage = true;
 uint8_t bat_idx=4;
 uint8_t vol_idx=2;
 
-char* volumes[3] = {   
+// Volumes
+char* volumes_levels[NVOLS] = {   
     "#4f0a4f \xEF\x80\xA6#", // LV_SYMBOL_MUTE
     "#ff00ff \xEF\x80\xA7#", // LV_SYMBOL_VOLUME_MID
     "#ff00ff \xEF\x80\xA8#",  // LV_SYMBOL_VOLUME_MAX
 };
+uint16_t volumes[NVOLS] = { 0, 55, 255 }; 
 
 const char* barook = "#ff00ff \xEF\x80\x8C#";
 const char* baroko = "#4f0a4f \xEF\x80\x8C#";
@@ -83,6 +87,7 @@ void taskBaro(void *param);
 void taskBluetooth(void *param);
 void taskGPSU7(void *param);
 void taskOledUpdate(void *param);
+void taskBuzzer(void *param);
 
 void resetUBX();
 void changeGpsHz();
@@ -90,6 +95,7 @@ void setSentences();
 
 TaskHandle_t xHandleBluetooth = NULL;
 TaskHandle_t xHandleGPSU7 = NULL;
+TaskHandle_t xHandleBUZZER = NULL;
 
 void sendUBX(const unsigned char *progmemBytes, size_t len );
 
@@ -183,6 +189,154 @@ void print_wakeup_reason(){
   }
 }
 
+void loadConfiguration(){
+
+    log_i("Reading settings from: %s",SETTINGS_FileName);
+
+    File jsonsettings_file = SPIFFS.open(SETTINGS_FileName, "r");
+    delay(50);
+    if(!jsonsettings_file){
+      log_e("Failed to open file for reading. Wrinting a new one.");
+
+      status.jsonSettings["volume"] = status.volume;
+      status.jsonSettings["gps_hz"] = status.gps_hz;
+      status.jsonSettings["min_sat_av"] = status.min_sat_av;
+      status.jsonSettings["rotation"] = status.rotation;
+      status.jsonSettings["vario_sink_on"] = status.vario_sink_on;
+      status.jsonSettings["vario_lift_on"] = status.vario_lift_on;
+      status.jsonSettings["vario_avg_ms"] = status.vario_avg_ms;
+      status.jsonSettings["vario_avg_ms_b"] = status.vario_avg_ms_b;
+
+      String vario_curve = "[\
+        {\"vval\":10,\"frq\":2000,\"ton\":100,\"toff\":100},\
+        {\"vval\":5,\"frq\":1500,\"ton\":200,\"toff\":100},\
+        {\"vval\":2.5,\"frq\":1250,\"ton\":200,\"toff\":150},\
+        {\"vval\":0.5,\"frq\":1000,\"ton\":200,\"toff\":200},\
+        {\"vval\":0,\"frq\":0,\"ton\":0,\"toff\":50},\
+        {\"vval\":-2.5,\"frq\":450,\"ton\":250,\"toff\":750},\
+        {\"vval\":-5,\"frq\":250,\"ton\":500,\"toff\":1000},\
+        {\"vval\":-10,\"frq\":200,\"ton\":500,\"toff\":1000}]";
+
+      status.jsonSettings["vario_curve"] = JSON.parse(vario_curve);
+
+      status.jsonSettings["thermal_detect"] = status.thermal_detect;
+      status.jsonSettings["thermal_avg"] = status.thermal_avg;
+
+      File file = SPIFFS.open(SETTINGS_FileName, FILE_WRITE);
+      if (!file) {
+        log_e("There was an error opening the file for writing");
+        return;
+      }
+      String json_string = JSON.stringify(status.jsonSettings);
+      if (file.print(json_string.c_str())) {
+        log_i("Firmware verison updated");
+        status.firmware_v = VERSION;
+      } else {
+        log_e("File write failed");
+      }
+    
+      file.close();
+
+    }else{
+      String fileContent;
+      while(jsonsettings_file.available()){
+        fileContent += String((char)jsonsettings_file.read());
+      }
+      status.jsonSettings = JSON.parse(fileContent);
+
+      uint32_t intValue; 
+      bool boolValue;
+      char charValue[20];
+      if(status.jsonSettings.hasOwnProperty("volume")){
+        // Serial.print("Volume from Settings: "); 
+        intValue = status.jsonSettings["volume"];
+        // Serial.println(intValue);
+        status.volume = intValue;
+        log_i("Volume from Settings: %lu",intValue); 
+      }    
+
+      if(status.jsonSettings.hasOwnProperty(F("gps_hz"))){
+        // Serial.print("Gps Hz from Settings: "); 
+        intValue = status.jsonSettings["gps_hz"];
+        // Serial.println(intValue);
+        status.gps_hz = intValue;
+        log_i("Gps Hz from Settings: %lu",intValue); 
+      }
+
+      if(status.jsonSettings.hasOwnProperty(F("min_sat_av"))){
+        // Serial.print("Min Sat available for valid nmea: ");
+        intValue = status.jsonSettings["min_sat_av"];
+        // Serial.println(intValue);
+        status.min_sat_av = intValue;
+        log_i("Min Sat available for valid nmea: %lu",intValue);
+      }
+
+      if(status.jsonSettings.hasOwnProperty(F("rotation"))){
+        // Serial.print("Display rotation: ");
+        intValue = status.jsonSettings["rotation"];
+        // Serial.println(intValue);
+        status.rotation = intValue;
+        log_i("Display rotation: %lu",intValue);
+      }
+
+      if(status.jsonSettings.hasOwnProperty("sink_on")){
+        status.vario_sink_on = (double)status.jsonSettings["vario_sink_on"];
+        // Serial.print("Vario Sink on: ");
+        // Serial.println(status.vario_sink_on);
+        log_i("Vario Sink on: %f",status.vario_sink_on);
+      }
+
+      if(status.jsonSettings.hasOwnProperty("vario_lift_on")){
+        status.vario_lift_on = (double)status.jsonSettings["vario_lift_on"];
+        // Serial.print("Vario Lift on: ");
+        // Serial.println(status.vario_lift_on);
+        log_i("Vario Lift on: %f",status.vario_lift_on);
+      }
+
+      if(status.jsonSettings.hasOwnProperty("vario_avg_ms")){
+        status.vario_avg_ms = status.jsonSettings["vario_avg_ms"];
+        // Serial.print("vario_avg_ms: ");
+        // Serial.println(status.vario_avg_ms);
+        log_i("vario_avg_ms: %lu",status.vario_avg_ms);
+      }
+      if(status.jsonSettings.hasOwnProperty("vario_avg_ms_b")){
+        status.vario_avg_ms_b = status.jsonSettings["vario_avg_ms_b"];
+        log_i("vario_avg_ms_b: %lu",status.vario_avg_ms_b);
+      }
+        
+      if(status.jsonSettings.hasOwnProperty("vario_curve")){
+        // Serial.println("Vario curve:");
+        log_i("Vario curve:");
+        for (int i=0;i<sizeof(status.jsonSettings["vario_curve"]);i++){
+          float vval = (double)status.jsonSettings["vario_curve"][i]["vval"];
+          int frq = status.jsonSettings["vario_curve"][i]["frq"];
+          int ton = status.jsonSettings["vario_curve"][i]["ton"];
+          int toff = status.jsonSettings["vario_curve"][i]["toff"];
+          // Serial.print("  vval: ");Serial.print(vval);
+          // Serial.print("  frq: ");Serial.print(frq);
+          // Serial.print("  ton: ");Serial.print(ton);
+          // Serial.print("  toff: ");Serial.println(toff);
+          log_i("vval: %f frq: %d ton: %d toff %d",vval,frq,ton,toff);
+        }
+      }
+
+      if(status.jsonSettings.hasOwnProperty("thermal_detect")){
+        boolValue = status.jsonSettings["thermal_detect"];
+        status.thermal_detect = boolValue;
+        log_i("thermal_detect: %d",boolValue);
+      }
+      if(status.jsonSettings.hasOwnProperty("thermal_avg")){
+        status.thermal_avg = status.jsonSettings["thermal_avg"];
+        log_i("thermal_avg: %lu",status.thermal_avg);
+      }
+
+    jsonsettings_file.close();
+
+    status.settings_loaded = true;
+
+  }
+}
+
 void setup()
 {
 
@@ -260,12 +414,13 @@ void setup()
     delay(50);
 
     rm67162_init(); // amoled lcd initialization
-    lcd_setRotation(1);
+    lcd_setRotation(status.rotation);
     xTaskCreatePinnedToCore(led_task, "led_task", 1024, NULL, 1, NULL, 0);
-    xTaskCreatePinnedToCore(taskOledUpdate, "taskOledUpdate", 4096, NULL, 2, NULL, 1);
-    xTaskCreatePinnedToCore(taskBaro, "taskBaro", 6500, NULL, 4, NULL, 1);
-    xTaskCreatePinnedToCore(taskBluetooth, "taskBluetooth", 6500, NULL, 3, &xHandleBluetooth, 0);
-    xTaskCreatePinnedToCore(taskGPSU7, "taskGPSU7", 7500, NULL, 5, &xHandleGPSU7, 1); 
+    xTaskCreatePinnedToCore(taskBuzzer, "taskBuzzer", 6500, NULL, 2, &xHandleBUZZER, 0); 
+    xTaskCreatePinnedToCore(taskOledUpdate, "taskOledUpdate", 4096, NULL, 3, NULL, 1);
+    xTaskCreatePinnedToCore(taskBaro, "taskBaro", 6500, NULL, 5, NULL, 1);
+    xTaskCreatePinnedToCore(taskBluetooth, "taskBluetooth", 6500, NULL, 4, &xHandleBluetooth, 0);
+    xTaskCreatePinnedToCore(taskGPSU7, "taskGPSU7", 7500, NULL, 6, &xHandleGPSU7, 1); 
 
     /*Initialize the display*/
     lv_init();
@@ -322,7 +477,8 @@ void setup()
     button1.attachClick(
        [](){ 
             vol_idx = (vol_idx+1)%3;
-            const char* nv = volumes[vol_idx];
+            const char* nv = volumes_levels[vol_idx];
+            status.volume = volumes[vol_idx];
             lv_msg_send(MSG_NEW_VOLUME, &nv);
         }
     );
@@ -496,6 +652,110 @@ void led_task(void *param)
             }
         }
 }
+
+uint32_t interpolate(float vval, const char *field){
+  uint32_t interpolated = 0;
+
+  int s = sizeof(status.jsonSettings["vario_curve"]);
+  float v1 = 0.;
+  float v2 = 0.;
+  uint32_t f1 = 0;
+  uint32_t f2 = 0;
+  bool minFound = false;
+  bool maxFound = false;
+  for (int i =0;i<s;i++){
+    float v = (double)status.jsonSettings["vario_curve"][i]["vval"];
+    if (vval < v && !minFound){
+      v1 = v;
+      f1 = status.jsonSettings["vario_curve"][i][field];
+    }else{ minFound = true;}
+    if (vval > v && !maxFound){
+      v2 = v;
+      f2 = status.jsonSettings["vario_curve"][i][field];
+      maxFound = true;
+    }
+    if (v == vval){
+      return status.jsonSettings["vario_curve"][i][field];
+    }
+  }
+  float ratio = (vval - v1)/(v2 - v1);
+  int sign = (float)f2 - (float)f1 >= 0 ? 1 : -1;
+  interpolated = f1 + sign * ratio * abs(((float)f2 - (float)f1)); 
+
+  return interpolated;
+}
+
+
+void taskBuzzer(void *pvParameters){
+  // Serial.println("Test Speaker");
+  ledcSetup(LEDC_CHANNEL_0, 1000, 8);
+  ledcAttachPin(SPERKER_PIN, LEDC_CHANNEL_0);
+  bool von = false;
+
+  delay(2000);
+  sing(0);
+  delay(3000);
+
+  while(1){
+
+    if (status.lowPower){
+      sing(3);
+      delay(500);
+//      status.lowPower = false;
+    }else{
+
+      int fr = 0;
+      uint32_t son = 50; //ms
+      uint32_t soff = 50; //ms
+
+      // if volume is 0 then do not beep
+      if (status.volume == 0) von=false;
+
+      if (status.volume > 0 && von == false){
+        von = true;
+        ledcSetup(LEDC_CHANNEL_0, 1000, 8);
+        ledcAttachPin(SPERKER_PIN, LEDC_CHANNEL_0);
+      }
+      if (von){
+
+        fr = interpolate(status.vario_avg_b, "frq");
+        son = interpolate(status.vario_avg_b, "ton");
+        soff = interpolate(status.vario_avg_b, "toff");
+
+        bool beep = (status.vario_avg_b <= status.vario_sink_on || status.vario_avg_b >= status.vario_lift_on);
+        if (beep){
+            ledcWriteTone(LEDC_CHANNEL_0, fr);
+            ledcWrite(LEDC_CHANNEL_0, status.volume);
+            delay(son);
+            ledcWriteTone(LEDC_CHANNEL_0, 0);
+        }else{
+            ledcWriteTone(LEDC_CHANNEL_0, 0);
+            ledcWrite(LEDC_CHANNEL_0, 0);
+            delay(50);
+          }
+        
+      }else{
+        ledcDetachPin(SPERKER_PIN);
+      }
+
+      delay(soff);
+    }
+    if (status.lowPower || status.updating) break;
+  }
+
+  status.volume = 0;
+  ledcDetachPin(SPERKER_PIN);
+
+  // log_i("stop task BUZZER");
+  // Use the handle to delete the task.
+     if( xHandleBUZZER != NULL )
+     {
+        //  Serial.println("stop task BUZZER");
+         log_i("stop task BUZZER");
+         vTaskDelete( xHandleBUZZER );
+     }
+}
+
 
 // Display vario avg value
 float average_vario(float vario){

@@ -1,0 +1,24 @@
+{
+    "utc_offset":1,
+    "volume": 0,
+    "beep_when_f":false,
+    "gps_hz":5,
+    "min_sat_av":5,
+    "rotation":1,
+    "vario_sink_on":-2.9,
+    "vario_lift_on":0.0,
+    "vario_avg_ms":250,
+    "vario_avg_ms_b":50,
+    "vario_curve": [
+        {"vval":10,"frq":2000,"ton":100,"toff":100},
+        {"vval":5,"frq":1500,"ton":200,"toff":100},
+        {"vval":2.5,"frq":1250,"ton":200,"toff":150},
+        {"vval":0.5,"frq":1000,"ton":200,"toff":200},
+        {"vval":0,"frq":0,"ton":0,"toff":50},
+        {"vval":-2.5,"frq":450,"ton":250,"toff":750},
+        {"vval":-5,"frq":250,"ton":500,"toff":1000},
+        {"vval":-10,"frq":200,"ton":500,"toff":1000}
+    ],
+    "thermal_detect":false,
+    "thermal_avg":2000
+}

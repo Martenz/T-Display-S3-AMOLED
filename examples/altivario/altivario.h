@@ -2,6 +2,7 @@
 #define __ALTIVARIO_H__
 
 #include <Arduino.h>
+#include <Arduino_JSON.h>
 
 #define MAXSTRING 255
 
@@ -16,7 +17,17 @@
 
 #define VPARRAYSIZE 8
 
+#define SPERKER_PIN             (3)
+#define LEDC_CHANNEL_0          (0)
+#define MINIMUM_VOLUME 0
+#define NVOLS 3
+
+#define SETTINGS_FileName "/settings.json"
+
 struct statusData{
+
+    JSONVar jsonSettings;
+    bool settings_loaded = false;
 
     uint32_t chipId;
     uint16_t firmware_v = 0;
@@ -56,6 +67,8 @@ struct statusData{
     float vario_avg_b=0.f;
     uint16_t vario_avg_ms=50;
     uint16_t vario_avg_ms_b=50;
+    float vario_sink_on = -2.9;
+    float vario_lift_on = 0.1;
 
     bool thermalling=false;
     bool thermal_detect=false;
@@ -73,6 +86,9 @@ struct statusData{
     String LK8EX1_s;
     bool nmeaReady = false;
     String NMEA_raw;
+
+    uint16_t volume = 0;
+    uint8_t rotation = 1;
 
 };
 

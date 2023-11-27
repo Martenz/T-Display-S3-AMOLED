@@ -120,10 +120,9 @@ void updateFirmware(uint8_t *data, size_t len){
 
 void handle_OnUpdate(){
   server.sendHeader("Location", "/",true);  
-  server.send(302, "text/plain", "");
   server.send(200, "text/html", SendHTML(true,"Updating...",true)); 
   setClock();
-
+  delay(50);
   //WiFiClient client;
   WiFiClientSecure client;// = new WiFiClientSecure;
   //HTTPClient http;
