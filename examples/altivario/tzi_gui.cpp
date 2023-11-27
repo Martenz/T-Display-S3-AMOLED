@@ -176,6 +176,15 @@ void ui_begin()
     lv_gif_set_src(logo_img, &tzi);
     ui_toolbar_status(tv1);
 
+    lv_obj_t *firmware_text = lv_label_create(tv1);
+    lv_obj_align(firmware_text, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_text_align(firmware_text, LV_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(firmware_text, &lv_font_montserrat_28, 0);
+    lv_label_set_recolor(firmware_text,true);
+    String fver =  "v."+String(status.firmware_v);
+    lv_label_set_text(firmware_text, fver.c_str());
+    lv_obj_set_style_text_color(firmware_text, UI_FONT_COLOR, 0);
+
     lv_obj_t *bat_label = lv_label_create(tv1);
     lv_obj_align(bat_label, LV_ALIGN_BOTTOM_LEFT, 0, 0);
     lv_obj_set_style_text_font(bat_label, &lv_font_montserrat_28, 0);

@@ -14,6 +14,7 @@ extern struct statusData status;
 #include "Arduino.h"
 #include "Arduino.h"
 #include "lvgl.h"
+#include "altivario.h"
 
 #define UI_BG_COLOR    lv_color_black()
 #define UI_FRAME_COLOR lv_color_hex(0x282828)

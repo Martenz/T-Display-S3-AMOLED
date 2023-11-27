@@ -11,7 +11,7 @@ def get_build_flag_value(flag_name):
 def copy_file(*args, **kwargs):
     print("Copying file output to project directory...")
     version = get_build_flag_value("VERSION")
-    version = version[1:-1].replace(".","")
+    version = str(version).replace(".","")
     target = str(kwargs['target'][0])
     savename = target.split(os.path.sep)[-1]   # name of environment
     platform = target.split(os.path.sep)[-2]

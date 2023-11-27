@@ -17,6 +17,7 @@ extern struct statusData status;
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
+#include <Update.h>
 
 #include "altivario.h"
 
@@ -30,11 +31,14 @@ extern struct statusData status;
 #define DOWNLOADURL "https://github.com/Martenz/T-Display-S3-AMOLED/raw/tzi/altivario/firmware/latest_firmware.bin"
 
 String httpsGETRequest(const char* serverName);
-String SendHTML(bool update, String version);
+String SendHTML(bool update, String version, bool updating);
+
+void updateFirmware(uint8_t *data, size_t len);
 
 void TzWifiBegin();
 void TzWifiOff();
 void handle_OnConnect();
+void handle_OnUpdate();
 void handle_NotFound();
 void HandleMyClients();
 

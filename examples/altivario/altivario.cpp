@@ -230,6 +230,24 @@ void setup()
       }
     }
 
+    // check if updated 
+    if (status.firmware_v < VERSION){
+        File file = SPIFFS.open("/version.json", FILE_WRITE);
+        if (!file) {
+          log_e("There was an error opening the file for writing");
+          return;
+        }
+        String fver = "{\"version\":" + String(VERSION) + "}";
+        if (file.print(fver.c_str())) {
+          log_i("Firmware verison updated");
+          status.firmware_v = VERSION;
+        } else {
+          log_e("File write failed");
+        }
+      
+        file.close();
+    }
+
     delay(50);
 
     pinMode(GPSRXPIN,INPUT);
@@ -600,7 +618,7 @@ void taskBaro(void *param)
     //   status.update_kalman = false;
     // }
     
-    if (status.lowPower) break;
+    if (status.lowPower || status.updating) break;
     delay(10);
 
     }
@@ -658,6 +676,8 @@ void taskOledUpdate(void *param)
 
 //        log_i("Elevation: %i - Vario: %i",el,vd);
 
+        if (status.lowPower || status.updating) break;
+
     }
 
 }
@@ -710,7 +730,7 @@ void taskBluetooth(void *param) {
           }
         }
 
-      if (status.lowPower) break; 
+      if (status.lowPower || status.updating) break;
       delay(50);
     };
 
@@ -904,7 +924,7 @@ void taskGPSU7(void *param){
       break;
     }
 
-    if (status.lowPower) break;
+    if (status.lowPower || status.updating) break;
     delay(10);
   }
 

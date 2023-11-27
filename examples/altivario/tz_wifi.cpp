@@ -20,6 +20,10 @@ String wifi_date = "-";
 // IPAddress subnet(255,255,255,0);
 WebServer server(80);
 
+// Global variables
+int totalLength;       //total size of firmware
+int currentLength = 0; //current size of written firmware
+
 String httpsGETRequest(const char* serverName) {
   //WiFiClient client;
   WiFiClientSecure client;// = new WiFiClientSecure;
@@ -30,9 +34,9 @@ String httpsGETRequest(const char* serverName) {
   // http.begin(client, serverName);
   // http.addHeader("accept", "application/json");
   client.setInsecure();
-  https.begin(client, serverName);
   https.addHeader("accept", "application/json");
   https.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+  https.begin(client, serverName);
       
   // If you need Node-RED/server authentication, insert user and password below
   //http.setAuthorization("REPLACE_WITH_SERVER_USERNAME", "REPLACE_WITH_SERVER_PASSWORD");
@@ -72,18 +76,97 @@ void handle_OnConnect() {
   log_i("Latest built version: %i", ver);
   
   if (ver > status.firmware_v){
-    server.send(200, "text/html", SendHTML(true,String(ver))); 
+    server.send(200, "text/html", SendHTML(true,String(ver),false)); 
   }else{
-    server.send(200, "text/html", SendHTML(false, String(status.firmware_v))); 
+    server.send(200, "text/html", SendHTML(false, String(status.firmware_v),false)); 
   }
 
+}
+
+// Function to update firmware incrementally
+// Buffer is declared to be 128 so chunks of 128 bytes
+// from firmware is written to device until server closes
+void updateFirmware(uint8_t *data, size_t len){
+  Update.write(data, len);
+  currentLength += len;
+  // Print dots while waiting for update to finish
+  Serial.print('.');
+  // if current length of written firmware is not equal to total firmware size, repeat
+  if(currentLength != totalLength) return;
+  Update.end(true);
+  log_i("\nUpdate Success, Total Size: %u\nRebooting...\n", currentLength);
+
+  server.send(200, "text/html", SendHTML(true,"Restarting...",true)); 
+
+  delay(250);
+  // Restart ESP32 to see changes 
+  ESP.restart();
+}
+
+void handle_OnUpdate(){
+
+  server.send(200, "text/html", SendHTML(true,"Updating...",true)); 
+
+  //WiFiClient client;
+  WiFiClientSecure client;// = new WiFiClientSecure;
+  //HTTPClient http;
+  HTTPClient https;
+    
+  // Your Domain name with URL path or IP address with path
+  // http.begin(client, serverName);
+  // http.addHeader("accept", "application/json");
+  client.setInsecure();
+
+//  https.addHeader("accept", "application/json");
+  https.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+
+  // Connect to external web server
+  https.begin(client, DOWNLOADURL);
+
+  // Get file, just to check if each reachable
+  int resp = https.GET();
+
+  // If file is reachable, start downloading
+  if(resp > 0){
+
+      status.updating = true;
+      // get length of document (is -1 when Server sends no Content-Length header)
+      totalLength = https.getSize();
+      // transfer to local variable
+      int len = totalLength;
+      // this is required to start firmware update process
+      Update.begin(UPDATE_SIZE_UNKNOWN);
+      log_i("FW Size: %u\n",totalLength);
+      // create buffer for read
+      uint8_t buff[128] = { 0 };
+      // get tcp stream
+      WiFiClient * stream = https.getStreamPtr();
+      // read all data from server
+      log_i("Updating firmware...");
+      while(https.connected() && (len > 0 || len == -1)) {
+           // get available data size
+           size_t size = stream->available();
+           if(size) {
+              // read up to 128 byte
+              int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
+              // pass to function
+              updateFirmware(buff, c);
+              if(len > 0) {
+                 len -= c;
+              }
+           }
+           delay(1);
+      }
+  }
+
+//  client.stop();
 }
 
 void handle_NotFound(){
   server.send(404, "text/plain", "Not found");
 }
 
-String SendHTML(bool update, String version){
+String SendHTML(bool update, String version, bool updating){
   String ptr = "<!DOCTYPE html> <html>\n";
   ptr +="<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n";
   ptr +="<title>TzInstruments</title>\n";
@@ -112,9 +195,14 @@ String SendHTML(bool update, String version){
   }else{
     ptr += "<p>You are running on an old version: <b>";
     ptr += status.firmware_v;
-    ptr += "</b>\nUpdate to latest available <b>";
-    ptr += version;
-    ptr += "</b></p><a class=\"button button-on\" href=\"/led1off\">UPDATE Firmware</a>";
+    ptr += "</b>\nUpdate to latest available ";
+    if (updating){
+      ptr += "<p><b>" + version + "</b></p>";
+      ptr += "<p>Wait until esp32 restarts with new firmware installed, once done reconnect through wifi.</p>";
+    }else{
+      ptr += "<b>" + version;
+      ptr += "</b></p><a class=\"button button-on\" href=\"/update\">UPDATE Firmware</a>";
+    }
   }
 
   ptr +="</body>\n";
@@ -132,6 +220,7 @@ void TzWifiBegin(){
     log_i("[+] AP Created with IP Gateway: %s", WiFi.softAPIP().toString().c_str());
 
     server.on("/", handle_OnConnect);
+    server.on("/update", handle_OnUpdate);
     server.onNotFound(handle_NotFound);
 
 //    server.on("/update", ...);
