@@ -32,7 +32,7 @@ extern struct statusData status;
 #define DOWNLOADURL "https://github.com/Martenz/T-Display-S3-AMOLED/raw/tzi/altivario/firmware/latest_firmware.bin"
 
 String httpsGETRequest(const char* serverName);
-String SendHTML(bool update, String version, bool updating);
+String SendHTML(bool update, String version);
 
 void updateFirmware(uint8_t *data, size_t len);
 

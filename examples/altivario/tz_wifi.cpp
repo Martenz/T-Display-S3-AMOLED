@@ -76,9 +76,9 @@ void handle_OnConnect() {
   log_i("Latest built version: %i", ver);
   
   if (ver > status.firmware_v){
-    server.send(200, "text/html", SendHTML(true,String(ver),false)); 
+    server.send(200, "text/html", SendHTML(true,String(ver))); 
   }else{
-    server.send(200, "text/html", SendHTML(false, String(status.firmware_v),false)); 
+    server.send(200, "text/html", SendHTML(false, String(status.firmware_v))); 
   }
 
 }
@@ -112,16 +112,14 @@ void updateFirmware(uint8_t *data, size_t len){
   Update.end(true);
   log_i("\nUpdate Success, Total Size: %u\nRebooting...\n", currentLength);
 
-  server.sendHeader("Location", "/",true);  
-  server.send(200, "text/html", SendHTML(true,"Restarting...",true)); 
-  delay(5000);
+  delay(1000);
   // Restart ESP32 to see changes 
   ESP.restart();
 }
 
 void handle_OnUpdate(){
   server.sendHeader("Location", "/",true);  
-  server.send(200, "text/html", SendHTML(true,"Updating...",true)); 
+  server.send(302, "text/plain", ""); 
   setClock();
   delay(50);
   //WiFiClient client;
@@ -180,7 +178,7 @@ void handle_NotFound(){
   server.send(404, "text/plain", "Not found");
 }
 
-String SendHTML(bool update, String version, bool updating){
+String SendHTML(bool update, String version){
   String ptr = "<!DOCTYPE html> <html>\n";
   ptr +="<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n";
   ptr +="<title>TzInstruments</title>\n";
@@ -210,13 +208,13 @@ String SendHTML(bool update, String version, bool updating){
     ptr += "<p>You are running on an old version: <b>";
     ptr += status.firmware_v;
     ptr += "</b>\nUpdate to latest available ";
-    if (updating){
-      ptr += "<p><b>" + version + "</b></p>";
-      ptr += "<p>Wait until esp32 restarts with new firmware installed, once done reconnect through wifi.</p>";
-    }else{
       ptr += "<b>" + version;
-      ptr += "</b></p><a class=\"button button-on\" href=\"/update\">UPDATE Firmware</a>";
-    }
+      ptr += "</b></p><a id=\"update\" class=\"button button-on\" href=\"/update\">UPDATE Firmware</a>";
+      ptr += "<script>";
+      ptr += "const u = document.getElementById('update');";
+      ptr += "u.addEventListener('click',function(){u.innerHTML = 'Updating...';";
+      ptr += "alert('Wait unitl esp32 restarts with new firmware, then reconnect to wifi if needed.');";
+      ptr += "});</script>";
   }
 
   ptr += "<p><a href=\"/\">Return to main page</a><p>";

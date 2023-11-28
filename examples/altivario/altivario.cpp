@@ -379,7 +379,7 @@ void setup()
         //wifi_date = JSON.stringify(value);
         uint16_t ver = myObject["version"];
         status.firmware_v = ver;
-        log_i("Firmware Version: %i", status.firmware_v);
+        log_i("Firmware Version v.%i", status.firmware_v);
         file.close();
       }
     }
@@ -393,7 +393,7 @@ void setup()
         }
         String fver = "{\"version\":" + String(VERSION) + "}";
         if (file.print(fver.c_str())) {
-          log_i("Firmware verison updated");
+          log_i("Firmware verison updated to v.%i", VERSION);
           status.firmware_v = VERSION;
         } else {
           log_e("File write failed");
