@@ -55,7 +55,7 @@ uint8_t percentages[VPARRAYSIZE] = {  0,  20,  50,  80,  95,  98,   99, 100 };
 
 bool gotomainpage = true;
 uint8_t bat_idx=4;
-uint8_t vol_idx=2;
+uint8_t vol_idx=1;
 
 // Volumes
 char* volumes_levels[NVOLS] = {   
@@ -189,73 +189,86 @@ void print_wakeup_reason(){
   }
 }
 
+void writeConfiguration(){
+
+  String newSettings = "{\n";
+
+  newSettings += "\"volume\":" + String(status.volume) + ",\n";
+  newSettings += "\"gps_hz\":" + String(status.gps_hz) + ",\n";
+  newSettings += "\"min_sat_av\":" + String(status.min_sat_av) + ",\n";
+  newSettings += "\"rotation\":" + String(status.rotation) + ",\n";
+  newSettings += "\"vario_sink_on\":" + String(status.vario_sink_on) + ",\n";
+  newSettings += "\"vario_lift_on\":" + String(status.vario_lift_on) + ",\n";
+  newSettings += "\"vario_avg_ms\":" + String(status.vario_avg_ms) + ",\n";
+  newSettings += "\"vario_avg_ms_b\":" + String(status.vario_avg_ms_b) + ",\n";
+
+
+  newSettings += "\"vario_curve\":[\n\
+    {\"vval\":10,\"frq\":2000,\"ton\":100,\"toff\":100},\n\
+    {\"vval\":5,\"frq\":1500,\"ton\":200,\"toff\":100},\n\
+    {\"vval\":0.2,\"frq\":400,\"ton\":150,\"toff\":400},\n\
+    {\"vval\":0.1,\"frq\":120,\"ton\":50,\"toff\":140},\n\
+    {\"vval\":-0.2,\"frq\":80,\"ton\":50,\"toff\":140},\n\
+    {\"vval\":-0.25,\"frq\":80,\"ton\":20,\"toff\":20},\n\
+    {\"vval\":-2.5,\"frq\":250,\"ton\":500,\"toff\":1000},\n\
+    {\"vval\":-10,\"frq\":200,\"ton\":500,\"toff\":1000}\n\
+  ],\n";
+
+  String td = status.thermal_detect ? "true" : "false";
+  newSettings += "\"thermal_detect\":" + td + ",\n";
+  newSettings += "\"thermal_avg\":" + String(status.thermal_avg) + "\n";
+  newSettings += "}";
+
+  File sfile = SPIFFS.open(SETTINGS_FileName, FILE_WRITE);
+  if (!sfile) {
+    log_e("There was an error opening the file for writing");
+    return;
+  }
+  if (sfile.print(newSettings.c_str())) {
+    log_i("Setting Updated.");
+  } else {
+    log_e("File write failed");
+  }
+
+  sfile.close();
+}
+
 void loadConfiguration(){
 
-    log_i("Reading settings from: %s",SETTINGS_FileName);
-
-    File jsonsettings_file = SPIFFS.open(SETTINGS_FileName, "r");
-    delay(50);
+    File jsonsettings_file = SPIFFS.open(SETTINGS_FileName);
     if(!jsonsettings_file){
-      log_e("Failed to open file for reading. Wrinting a new one.");
-
-      status.jsonSettings["volume"] = status.volume;
-      status.jsonSettings["gps_hz"] = status.gps_hz;
-      status.jsonSettings["min_sat_av"] = status.min_sat_av;
-      status.jsonSettings["rotation"] = status.rotation;
-      status.jsonSettings["vario_sink_on"] = status.vario_sink_on;
-      status.jsonSettings["vario_lift_on"] = status.vario_lift_on;
-      status.jsonSettings["vario_avg_ms"] = status.vario_avg_ms;
-      status.jsonSettings["vario_avg_ms_b"] = status.vario_avg_ms_b;
-
-      String vario_curve = "[\
-        {\"vval\":10,\"frq\":2000,\"ton\":100,\"toff\":100},\
-        {\"vval\":5,\"frq\":1500,\"ton\":200,\"toff\":100},\
-        {\"vval\":2.5,\"frq\":1250,\"ton\":200,\"toff\":150},\
-        {\"vval\":0.5,\"frq\":1000,\"ton\":200,\"toff\":200},\
-        {\"vval\":0,\"frq\":0,\"ton\":0,\"toff\":50},\
-        {\"vval\":-2.5,\"frq\":450,\"ton\":250,\"toff\":750},\
-        {\"vval\":-5,\"frq\":250,\"ton\":500,\"toff\":1000},\
-        {\"vval\":-10,\"frq\":200,\"ton\":500,\"toff\":1000}]";
-
-      status.jsonSettings["vario_curve"] = JSON.parse(vario_curve);
-
-      status.jsonSettings["thermal_detect"] = status.thermal_detect;
-      status.jsonSettings["thermal_avg"] = status.thermal_avg;
-
-      File file = SPIFFS.open(SETTINGS_FileName, FILE_WRITE);
-      if (!file) {
-        log_e("There was an error opening the file for writing");
-        return;
-      }
-      String json_string = JSON.stringify(status.jsonSettings);
-      if (file.print(json_string.c_str())) {
-        log_i("Firmware verison updated");
-        status.firmware_v = VERSION;
-      } else {
-        log_e("File write failed");
-      }
-    
-      file.close();
-
+      writeConfiguration();
     }else{
+      log_i("Reading settings from: %s",SETTINGS_FileName);
       String fileContent;
       while(jsonsettings_file.available()){
         fileContent += String((char)jsonsettings_file.read());
       }
+      delay(10);
+      log_i("json: %s",fileContent.c_str());
+
       status.jsonSettings = JSON.parse(fileContent);
+      delay(10);
 
       uint32_t intValue; 
       bool boolValue;
       char charValue[20];
-      if(status.jsonSettings.hasOwnProperty("volume")){
+      if(status.jsonSettings.hasOwnProperty(String("volume"))){
         // Serial.print("Volume from Settings: "); 
         intValue = status.jsonSettings["volume"];
         // Serial.println(intValue);
         status.volume = intValue;
         log_i("Volume from Settings: %lu",intValue); 
-      }    
+      }else{
+        log_e("key 'volume' not found. Rewrite configurations...");
+        SPIFFS.remove(SETTINGS_FileName);
+        delay(10);
+        writeConfiguration();
+        delay(1000);
+        ESP.restart();
+      }
 
-      if(status.jsonSettings.hasOwnProperty(F("gps_hz"))){
+      if(status.jsonSettings.hasOwnProperty(String("gps_hz"))){
         // Serial.print("Gps Hz from Settings: "); 
         intValue = status.jsonSettings["gps_hz"];
         // Serial.println(intValue);
@@ -263,7 +276,7 @@ void loadConfiguration(){
         log_i("Gps Hz from Settings: %lu",intValue); 
       }
 
-      if(status.jsonSettings.hasOwnProperty(F("min_sat_av"))){
+      if(status.jsonSettings.hasOwnProperty(String("min_sat_av"))){
         // Serial.print("Min Sat available for valid nmea: ");
         intValue = status.jsonSettings["min_sat_av"];
         // Serial.println(intValue);
@@ -271,7 +284,7 @@ void loadConfiguration(){
         log_i("Min Sat available for valid nmea: %lu",intValue);
       }
 
-      if(status.jsonSettings.hasOwnProperty(F("rotation"))){
+      if(status.jsonSettings.hasOwnProperty(String("rotation"))){
         // Serial.print("Display rotation: ");
         intValue = status.jsonSettings["rotation"];
         // Serial.println(intValue);
@@ -279,35 +292,35 @@ void loadConfiguration(){
         log_i("Display rotation: %lu",intValue);
       }
 
-      if(status.jsonSettings.hasOwnProperty("sink_on")){
+      if(status.jsonSettings.hasOwnProperty(String("sink_on"))){
         status.vario_sink_on = (double)status.jsonSettings["vario_sink_on"];
         // Serial.print("Vario Sink on: ");
         // Serial.println(status.vario_sink_on);
         log_i("Vario Sink on: %f",status.vario_sink_on);
       }
 
-      if(status.jsonSettings.hasOwnProperty("vario_lift_on")){
+      if(status.jsonSettings.hasOwnProperty(String("vario_lift_on"))){
         status.vario_lift_on = (double)status.jsonSettings["vario_lift_on"];
         // Serial.print("Vario Lift on: ");
         // Serial.println(status.vario_lift_on);
         log_i("Vario Lift on: %f",status.vario_lift_on);
       }
 
-      if(status.jsonSettings.hasOwnProperty("vario_avg_ms")){
+      if(status.jsonSettings.hasOwnProperty(String("vario_avg_ms"))){
         status.vario_avg_ms = status.jsonSettings["vario_avg_ms"];
         // Serial.print("vario_avg_ms: ");
         // Serial.println(status.vario_avg_ms);
         log_i("vario_avg_ms: %lu",status.vario_avg_ms);
       }
-      if(status.jsonSettings.hasOwnProperty("vario_avg_ms_b")){
+      if(status.jsonSettings.hasOwnProperty(String("vario_avg_ms_b"))){
         status.vario_avg_ms_b = status.jsonSettings["vario_avg_ms_b"];
         log_i("vario_avg_ms_b: %lu",status.vario_avg_ms_b);
       }
         
-      if(status.jsonSettings.hasOwnProperty("vario_curve")){
+      if(status.jsonSettings.hasOwnProperty(String("vario_curve"))){
         // Serial.println("Vario curve:");
         log_i("Vario curve:");
-        for (int i=0;i<sizeof(status.jsonSettings["vario_curve"]);i++){
+        for (int i=0;i<status.jsonSettings["vario_curve"].length();i++){
           float vval = (double)status.jsonSettings["vario_curve"][i]["vval"];
           int frq = status.jsonSettings["vario_curve"][i]["frq"];
           int ton = status.jsonSettings["vario_curve"][i]["ton"];
@@ -320,21 +333,21 @@ void loadConfiguration(){
         }
       }
 
-      if(status.jsonSettings.hasOwnProperty("thermal_detect")){
+      if(status.jsonSettings.hasOwnProperty(String("thermal_detect"))){
         boolValue = status.jsonSettings["thermal_detect"];
         status.thermal_detect = boolValue;
         log_i("thermal_detect: %d",boolValue);
       }
-      if(status.jsonSettings.hasOwnProperty("thermal_avg")){
+      if(status.jsonSettings.hasOwnProperty(String("thermal_avg"))){
         status.thermal_avg = status.jsonSettings["thermal_avg"];
         log_i("thermal_avg: %lu",status.thermal_avg);
       }
 
     jsonsettings_file.close();
 
-    status.settings_loaded = true;
-
   }
+  status.settings_loaded = true;
+
 }
 
 void setup()
@@ -417,14 +430,16 @@ void setup()
     setSentences();
     delay(50);
 
+    ledcDetachPin(SPERKER_PIN);
+
     rm67162_init(); // amoled lcd initialization
     lcd_setRotation(status.rotation);
     xTaskCreatePinnedToCore(led_task, "led_task", 1024, NULL, 1, NULL, 0);
-    xTaskCreatePinnedToCore(taskBuzzer, "taskBuzzer", 6500, NULL, 2, &xHandleBUZZER, 0); 
-    xTaskCreatePinnedToCore(taskOledUpdate, "taskOledUpdate", 4096, NULL, 3, NULL, 1);
-    xTaskCreatePinnedToCore(taskBaro, "taskBaro", 6500, NULL, 5, NULL, 1);
-    xTaskCreatePinnedToCore(taskBluetooth, "taskBluetooth", 6500, NULL, 4, &xHandleBluetooth, 0);
-    xTaskCreatePinnedToCore(taskGPSU7, "taskGPSU7", 7500, NULL, 6, &xHandleGPSU7, 1); 
+    xTaskCreatePinnedToCore(taskBuzzer, "taskBuzzer", 6500, NULL, 6, &xHandleBUZZER, 0); 
+    xTaskCreatePinnedToCore(taskOledUpdate, "taskOledUpdate", 4096, NULL, 2, NULL, 1);
+    xTaskCreatePinnedToCore(taskBaro, "taskBaro", 6500, NULL, 4, NULL, 1);
+    xTaskCreatePinnedToCore(taskBluetooth, "taskBluetooth", 6500, NULL, 3, &xHandleBluetooth, 0);
+    xTaskCreatePinnedToCore(taskGPSU7, "taskGPSU7", 7500, NULL, 5, &xHandleGPSU7, 1); 
 
     /*Initialize the display*/
     lv_init();
@@ -447,6 +462,7 @@ void setup()
     []() {
         uint64_t mask = 1 << PIN_BUTTON_1;
 
+        sing(1);
         lcd_sleep();
 
         log_i("Disable GPS");
@@ -461,6 +477,8 @@ void setup()
     button2.attachDoubleClick(
         []() {
             ui_gotomain_page(status.mainpage);
+            beepSpeaker();
+            beepSpeaker();
         }
     );
 
@@ -475,8 +493,14 @@ void setup()
                 lv_msg_send(MSG_NEW_WIFI, &wfoff);
                 TzWifiOff();
             }
+            beepSpeaker();
         }
     );
+
+    // init volume
+    const char* nv = volumes_levels[vol_idx];
+    status.volume = volumes[vol_idx];
+    lv_msg_send(MSG_NEW_VOLUME, &nv);
 
     button1.attachClick(
        [](){ 
@@ -484,11 +508,13 @@ void setup()
             const char* nv = volumes_levels[vol_idx];
             status.volume = volumes[vol_idx];
             lv_msg_send(MSG_NEW_VOLUME, &nv);
+            beepSpeaker();
         }
     );
 
     button2.attachClick([]() {
         ui_switch_page_up();
+        beepSpeaker();
     });
 
     // BUTTONS ---
@@ -696,7 +722,7 @@ void taskBuzzer(void *pvParameters){
   ledcAttachPin(SPERKER_PIN, LEDC_CHANNEL_0);
   bool von = false;
 
-  delay(2000);
+  delay(1000);
   sing(0);
   delay(3000);
 
@@ -725,6 +751,8 @@ void taskBuzzer(void *pvParameters){
         fr = interpolate(status.vario_avg_b, "frq");
         son = interpolate(status.vario_avg_b, "ton");
         soff = interpolate(status.vario_avg_b, "toff");
+
+
 
         bool beep = (status.vario_avg_b <= status.vario_sink_on || status.vario_avg_b >= status.vario_lift_on);
         if (beep){
@@ -844,20 +872,13 @@ void taskBaro(void *param)
       prev_altitude = estimated_alt;
       start_time = millis();
 
-      // Serial.print("ms: ");
-      // Serial.print(dt);
-      // Serial.print(" alt: ");
-      // Serial.print(altitude);
-      // Serial.print(" est.alt: ");
-      // Serial.print(estimated_alt);
-      // Serial.print(" est.vario: ");
-      // Serial.println(vario);
-
       status.altitude = estimated_alt;
       status.vario = vario;
       status.vario_avg = average_vario(vario);
       status.vario_dcm = int(status.vario_avg*10);
       status.vario_avg_b = average_vario_b(vario);
+
+      //log_i("vario_b %.02f",status.vario_avg_b);
 
       //$LK8EX1,101300,99999,99999,99,999,
       //LK8EX1,pressure,altitude,vario,temperature,battery,*checksum
@@ -873,14 +894,6 @@ void taskBaro(void *param)
       status.LK8EX1_s = String(sOut);
 
     }
-  
-    // if (status.update_kalman){
-    //   altKalmanFilter.setEstimateError(status.kalman_e_est);
-    //   altKalmanFilter.setMeasurementError(status.kalman_e_mea);
-    //   altKalmanFilter.setProcessNoise(status.kalman_q);      
-    //   log_i("Updating kalman e_est:%f e_mea:%f q:%f",status.kalman_e_est,status.kalman_e_mea,status.kalman_q);  
-    //   status.update_kalman = false;
-    // }
     
     if (status.lowPower || status.updating) break;
     delay(10);

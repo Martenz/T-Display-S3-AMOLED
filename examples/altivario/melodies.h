@@ -149,6 +149,17 @@ int tempo[4][64] = {
   }
 };
 
+void beepSpeaker()
+{
+    int i = 1;
+    while (i--) {
+        ledcWriteTone(LEDC_CHANNEL_0, 1000);
+        ledcWrite(LEDC_CHANNEL_0, status.volume);
+        delay(200);
+        ledcWriteTone(LEDC_CHANNEL_0, 0);
+    }
+}
+
 void sing(int song) {
   // iterate over the notes of the melody:
     ledcSetup(LEDC_CHANNEL_0, 1000, 8);

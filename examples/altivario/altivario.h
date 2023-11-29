@@ -17,7 +17,7 @@
 
 #define VPARRAYSIZE 8
 
-#define SPERKER_PIN             (3)
+#define SPERKER_PIN             (16)
 #define LEDC_CHANNEL_0          (0)
 #define MINIMUM_VOLUME 0
 #define NVOLS 3
@@ -68,11 +68,11 @@ struct statusData{
     uint16_t vario_avg_ms=50;
     uint16_t vario_avg_ms_b=50;
     float vario_sink_on = -2.9;
-    float vario_lift_on = 0.1;
+    float vario_lift_on = 0.;
 
     bool thermalling=false;
     bool thermal_detect=false;
-    uint16_t thermal_avg=0;
+    uint16_t thermal_avg=1000;
     int16_t GPS_course_prev = 0;
     int8_t avg_course = 0;
     int turn = 0;
@@ -87,7 +87,7 @@ struct statusData{
     bool nmeaReady = false;
     String NMEA_raw;
 
-    uint16_t volume = 0;
+    uint16_t volume = 55;
     uint8_t rotation = 1;
 
 };
