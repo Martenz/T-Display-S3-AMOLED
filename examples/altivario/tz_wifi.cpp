@@ -66,10 +66,19 @@ String httpsGETRequest(const char* serverName) {
 }
 
 void handle_OnConnect() {
+
+  //call to get current date
+  String api_date = httpsGETRequest(WORLDDATETIME);
+  JSONVar dateobj = JSON.parse(api_date);
+  //JSONVar value = myObject["datetime"];
+  //wifi_date = JSON.stringify(value);
+  const char* date = dateobj["datetime"];
+  wifi_date = date;
+  log_i("API date: %s", wifi_date.c_str());
+
   // call to check latest firmware version
   String api_get = httpsGETRequest(VERSIONCHECKURL);
   JSONVar myObject = JSON.parse(api_get);
-  JSONVar keys = myObject.keys();
   //JSONVar value = myObject["datetime"];
   //wifi_date = JSON.stringify(value);
   uint16_t ver = myObject["version"];
@@ -174,6 +183,45 @@ void handle_OnUpdate(){
   }
 }
 
+void handle_settings(){
+
+  // validate and write settings to SPIFFS
+  if (!server.hasArg("settings")) {
+    server.send(404, "text/plain", "Settings Not found");
+  }
+  String body = server.arg("settings");
+  JSONVar settings = JSON.parse(body);
+
+  bool validate=true;
+  if(!settings.hasOwnProperty(String("volume"))){
+    validate = false;
+  }
+
+  // TODO add all checks for complete attributes here, validate input in form before send
+  // ...
+
+  // SAVE TO SPIFFS
+  File sfile = SPIFFS.open(SETTINGS_FileName, FILE_WRITE);
+  if (!sfile) {
+    log_e("There was an error opening the file for writing");
+    return;
+  }
+  if (sfile.print(body.c_str())) {
+    log_i("Setting Updated.");
+  } else {
+    log_e("File write failed");
+  }
+  sfile.close();
+  delay(100);
+  loadConfiguration();
+  updateUi();
+
+  delay(100);
+
+  server.sendHeader("Location", "/",true);  
+  server.send(302, "text/plain", ""); 
+}
+
 void handle_NotFound(){
   server.send(404, "text/plain", "Not found");
 }
@@ -217,7 +265,17 @@ String SendHTML(bool update, String version){
       ptr += "});</script>";
   }
 
-  ptr += "<p><a href=\"/\">Return to main page</a><p>";
+  // TODO test update settings from webserver
+
+  ptr += "<form action='/settings' method='POST'><div>";
+  ptr += "<label for='settings'>Edit row settings here or paste from <a href='#'>Online Configurator</a></label>";
+  ptr += "<p><textarea id='settings' name='settings' rows='20' cols='50'>";
+  String jsonsettings = JSON.stringify(status.jsonSettings);
+  //jsonsettings.replace(",\"",",\n\"");
+  jsonsettings.replace(",{\"vval\":null}","");
+  ptr += jsonsettings;
+  ptr += "</textarea></p>";
+  ptr += "<button>Update Settings</button></div></form>";
 
   ptr +="</body>\n";
   ptr +="</html>\n";
@@ -233,8 +291,9 @@ void TzWifiBegin(){
     // WiFi.softAPConfig(local_ip, gateway, subnet);
     log_i("[+] AP Created with IP Gateway: %s", WiFi.softAPIP().toString().c_str());
 
-    server.on("/", handle_OnConnect);
-    server.on("/update", handle_OnUpdate);
+    server.on("/", HTTP_GET, handle_OnConnect);
+    server.on("/update", HTTP_GET, handle_OnUpdate);
+    server.on("/settings", HTTP_POST, handle_settings);
     server.onNotFound(handle_NotFound);
 
 //    server.on("/update", ...);
@@ -252,7 +311,7 @@ void TzWifiBegin(){
     while(WiFi.status() != WL_CONNECTED)
     {
         log_i(".");
-        delay(100);
+        delay(500);
     }
 
     log_i("[+] Connected to the WiFi network with local IP : %s", WiFi.localIP().toString().c_str());
@@ -274,22 +333,4 @@ void TzWifiOff(){
 
 void HandleMyClients(){
     server.handleClient();
-
-    if ((millis() - lastTime) > timerDelay) {
-        //Check WiFi connection status
-        if(WiFi.status()== WL_CONNECTED & status.updating != true){
-
-            String api_get = httpsGETRequest(WORLDDATETIME);
-            JSONVar myObject = JSON.parse(api_get);
-            JSONVar keys = myObject.keys();
-            //JSONVar value = myObject["datetime"];
-            //wifi_date = JSON.stringify(value);
-            const char* date = myObject["datetime"];
-            wifi_date = date;
-            log_i("API date: %s", wifi_date.c_str());
-
-        }
-        lastTime = millis();
-    }
-
 }

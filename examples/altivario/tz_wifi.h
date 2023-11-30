@@ -12,6 +12,7 @@ extern struct statusData status;
 #define __TZ_WIFI_H__
 
 #include <Arduino.h>
+#include "SPIFFS.h"
 #include <Update.h>
 #include <WiFi.h>
 #include <WebServer.h>
@@ -40,6 +41,7 @@ void TzWifiBegin();
 void TzWifiOff();
 void handle_OnConnect();
 void handle_OnUpdate();
+void handle_settings();
 void handle_NotFound();
 void HandleMyClients();
 

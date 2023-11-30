@@ -55,7 +55,6 @@ uint8_t percentages[VPARRAYSIZE] = {  0,  20,  50,  80,  95,  98,   99, 100 };
 
 bool gotomainpage = true;
 uint8_t bat_idx=4;
-uint8_t vol_idx=1;
 
 // Volumes
 char* volumes_levels[NVOLS] = {   
@@ -257,7 +256,8 @@ void loadConfiguration(){
         // Serial.print("Volume from Settings: "); 
         intValue = status.jsonSettings["volume"];
         // Serial.println(intValue);
-        status.volume = intValue;
+        status.volume_idx = intValue < 0 ? 0: intValue > 2 ? 2 : intValue;
+        status.volume = volumes[status.volume_idx];
         log_i("Volume from Settings: %lu",intValue); 
       }else{
         log_e("key 'volume' not found. Rewrite configurations...");
@@ -498,15 +498,15 @@ void setup()
     );
 
     // init volume
-    const char* nv = volumes_levels[vol_idx];
-    status.volume = volumes[vol_idx];
+    const char* nv = volumes_levels[status.volume_idx];
+    status.volume = volumes[status.volume_idx];
     lv_msg_send(MSG_NEW_VOLUME, &nv);
 
     button1.attachClick(
        [](){ 
-            vol_idx = (vol_idx+1)%3;
-            const char* nv = volumes_levels[vol_idx];
-            status.volume = volumes[vol_idx];
+            status.volume_idx = (status.volume_idx+1)%3;
+            const char* nv = volumes_levels[status.volume_idx];
+            status.volume = volumes[status.volume_idx];
             lv_msg_send(MSG_NEW_VOLUME, &nv);
             beepSpeaker();
         }
@@ -519,6 +519,12 @@ void setup()
 
     // BUTTONS ---
 
+}
+
+void updateUi(){
+  const char* nv = volumes_levels[status.volume_idx];
+  status.volume = volumes[status.volume_idx];
+  lv_msg_send(MSG_NEW_VOLUME, &nv);
 }
 
 uint8_t getBatteryPerc(){
@@ -686,7 +692,7 @@ void led_task(void *param)
 uint32_t interpolate(float vval, const char *field){
   uint32_t interpolated = 0;
 
-  int s = sizeof(status.jsonSettings["vario_curve"]);
+  int s = status.jsonSettings["vario_curve"].length();
   float v1 = 0.;
   float v2 = 0.;
   uint32_t f1 = 0;

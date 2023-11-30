@@ -24,6 +24,9 @@
 
 #define SETTINGS_FileName "/settings.json"
 
+void writeConfiguration();
+void loadConfiguration();
+void updateUi();
 struct statusData{
 
     JSONVar jsonSettings;
@@ -88,6 +91,7 @@ struct statusData{
     String NMEA_raw;
 
     uint16_t volume = 55;
+    uint8_t volume_idx = 1;
     uint8_t rotation = 1;
 
 };
