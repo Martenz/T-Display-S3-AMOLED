@@ -1,5 +1,5 @@
 # Custom
-tmp/
+tmp/*
 
 # Prerequisites
 *.d

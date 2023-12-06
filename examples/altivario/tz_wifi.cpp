@@ -1,7 +1,7 @@
 #include "tz_wifi.h"
 
-const char* wifi_network_ssid     = TZWIFINETSSID;
-const char* wifi_network_password =  TZWIFINETSSIDPSW;
+// const char* wifi_network_ssid     = status.wifi_ssid;
+// const char* wifi_network_password =  status.wifi_psw;
 const char *soft_ap_ssid          = TZWIFIAPSSID;
 const char *soft_ap_password      = TZWIFIAPSSIDPSW;
 
@@ -67,29 +67,33 @@ String httpsGETRequest(const char* serverName) {
 
 void handle_OnConnect() {
 
-  //call to get current date
-  String api_date = httpsGETRequest(WORLDDATETIME);
-  JSONVar dateobj = JSON.parse(api_date);
-  //JSONVar value = myObject["datetime"];
-  //wifi_date = JSON.stringify(value);
-  const char* date = dateobj["datetime"];
-  wifi_date = date;
-  log_i("API date: %s", wifi_date.c_str());
+  if (status.wifi_connected){
 
-  // call to check latest firmware version
-  String api_get = httpsGETRequest(VERSIONCHECKURL);
-  JSONVar myObject = JSON.parse(api_get);
-  //JSONVar value = myObject["datetime"];
-  //wifi_date = JSON.stringify(value);
-  uint16_t ver = myObject["version"];
-  log_i("Latest built version: %i", ver);
-  
-  if (ver > status.firmware_v){
-    server.send(200, "text/html", SendHTML(true,String(ver))); 
+    //call to get current date
+    String api_date = httpsGETRequest(WORLDDATETIME);
+    JSONVar dateobj = JSON.parse(api_date);
+    //JSONVar value = myObject["datetime"];
+    //wifi_date = JSON.stringify(value);
+    const char* date = dateobj["datetime"];
+    wifi_date = date;
+    log_i("API date: %s", wifi_date.c_str());
+
+    // call to check latest firmware version
+    String api_get = httpsGETRequest(VERSIONCHECKURL);
+    JSONVar myObject = JSON.parse(api_get);
+    //JSONVar value = myObject["datetime"];
+    //wifi_date = JSON.stringify(value);
+    uint16_t ver = myObject["version"];
+    log_i("Latest built version: %i", ver);
+    
+    if (ver > status.firmware_v){
+      server.send(200, "text/html", SendHTML(true,String(ver))); 
+    }else{
+      server.send(200, "text/html", SendHTML(false, String(status.firmware_v))); 
+    }
   }else{
-    server.send(200, "text/html", SendHTML(false, String(status.firmware_v))); 
+      server.send(200, "text/html", SendHTML(false, String(status.firmware_v))); 
   }
-
 }
 
 // Set time via NTP, as required for x.509 validation
@@ -238,45 +242,55 @@ String SendHTML(bool update, String version){
   ptr +=".button-off {background-color: #34495e;}\n";
   ptr +=".button-off:active {background-color: #2c3e50;}\n";
   ptr +="p {font-size: 14px;color: #888;margin-bottom: 10px;}\n";
+  ptr +="#all-settings{text-align: left;display: grid;width: 90%;max-width: 400px;margin: auto;}";
   ptr +="</style>\n";
   ptr +="</head>\n";
   ptr +="<body>\n";
   ptr +="<h1>TzInstruments Configurator</h1>\n";
   ptr +="<h3>Using Access Point(AP) Mode</h3>\n";
   
-  ptr += "<p>Current date: ";
-  ptr += wifi_date;
-  ptr += "</p>";
+  if (status.wifi_connected){
 
-  if (update==false){
-    ptr += "<p>Updated to latest Version: <b>";
-    ptr += status.firmware_v;
-    ptr += "</b></p>";
+    ptr += "<p>Current date: ";
+    ptr += wifi_date;
+    ptr += "</p>";
+
+    if (update==false){
+      ptr += "<p>Updated to latest Version: <b>";
+      ptr += status.firmware_v;
+      ptr += "</b></p>";
+    }else{
+      ptr += "<p>You are running on an old version: <b>";
+      ptr += status.firmware_v;
+      ptr += "</b>\nUpdate to latest available ";
+        ptr += "<b>" + version;
+        ptr += "</b></p><a id=\"update\" class=\"button button-on\" href=\"/update\">UPDATE Firmware</a>";
+        ptr += "<script>";
+        ptr += "const u = document.getElementById('update');";
+        ptr += "u.addEventListener('click',function(){u.innerHTML = 'Updating...';";
+        ptr += "alert('Wait unitl esp32 restarts with new firmware, then reconnect to wifi if needed.');";
+        ptr += "});</script>";
+    }
   }else{
-    ptr += "<p>You are running on an old version: <b>";
-    ptr += status.firmware_v;
-    ptr += "</b>\nUpdate to latest available ";
-      ptr += "<b>" + version;
-      ptr += "</b></p><a id=\"update\" class=\"button button-on\" href=\"/update\">UPDATE Firmware</a>";
-      ptr += "<script>";
-      ptr += "const u = document.getElementById('update');";
-      ptr += "u.addEventListener('click',function(){u.innerHTML = 'Updating...';";
-      ptr += "alert('Wait unitl esp32 restarts with new firmware, then reconnect to wifi if needed.');";
-      ptr += "});</script>";
+    ptr += "<p>WiFi connection not available<br>";
+    ptr += "please check WiFi SSID and PSW are correct or Network is available and retry.<br>";
+    ptr += "You can edit SSID and PSW in setting here below.</p>";
   }
-
   // TODO test update settings from webserver
-
+  ptr += "<div id='all-settings'></div>";
   ptr += "<form action='/settings' method='POST'><div>";
-  ptr += "<label for='settings'>Edit row settings here or paste from <a href='#'>Online Configurator</a></label>";
-  ptr += "<p><textarea id='settings' name='settings' rows='20' cols='50'>";
+  ptr += "<label for='settings'>Edit raw settings here below or paste from <a href='#'>Online Configurator</a></label>";
+  ptr += "<p><textarea id='settings' name='settings' rows='25' cols='50'>";
   String jsonsettings = JSON.stringify(status.jsonSettings);
   //jsonsettings.replace(",\"",",\n\"");
   jsonsettings.replace(",{\"vval\":null}","");
   ptr += jsonsettings;
   ptr += "</textarea></p>";
-  ptr += "<button>Update Settings</button></div></form>";
+  ptr += "<button id='update-settings'>Update Settings</button></div></form>";
 
+  ptr += "<script type='text/javascript'>";
+  ptr += String(js_script);
+  ptr += "</script>";
   ptr +="</body>\n";
   ptr +="</html>\n";
   return ptr;
@@ -305,20 +319,32 @@ void TzWifiBegin(){
 
     // WIFI Station
 
-    WiFi.begin(wifi_network_ssid, wifi_network_password);
+    WiFi.begin(status.wifi_ssid, status.wifi_psw);
     log_i("[*] Connecting to WiFi Network");
 
+    uint32_t startTime = millis();
     while(WiFi.status() != WL_CONNECTED)
     {
         log_i(".");
         delay(500);
+        if (millis() - startTime > 10000){
+          log_i("Wifi Connection failed, wrong or missing ssid/password or network not available");
+          status.wifi_connected=false;
+          break;
+        }
+
     }
 
-    log_i("[+] Connected to the WiFi network with local IP : %s", WiFi.localIP().toString().c_str());
+    if (WiFi.status() == WL_CONNECTED){
+      status.wifi_connected = true;
 
-    // WIFI Station ---
+      log_i("[+] Connected to the WiFi network with local IP : %s", WiFi.localIP().toString().c_str());
 
-    lastTime = 0;
+      // WIFI Station ---
+
+      lastTime = 0;
+    }
+
 }
 
 void TzWifiOff(){
@@ -329,6 +355,7 @@ void TzWifiOff(){
     log_i("[+] WiFi network disconnected");
     WiFi.mode(WIFI_OFF);
     log_i("[+] WiFi OFF");
+    status.wifi_connected = false;
 }
 
 void HandleMyClients(){

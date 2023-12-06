@@ -32,6 +32,10 @@ struct statusData{
     JSONVar jsonSettings;
     bool settings_loaded = false;
 
+    char wifi_psw[64];
+    char wifi_ssid[64];
+    bool wifi_connected = false;
+
     uint32_t chipId;
     uint16_t firmware_v = 0;
     bool updating = false;

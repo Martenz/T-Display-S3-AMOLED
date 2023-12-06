@@ -192,6 +192,8 @@ void writeConfiguration(){
 
   String newSettings = "{\n";
 
+  newSettings += "\"wifi_ssid\":" + String(status.wifi_ssid) + ",\n";
+  newSettings += "\"wifi_psw\":" + String(status.wifi_psw) + ",\n";
   newSettings += "\"volume\":" + String(status.volume) + ",\n";
   newSettings += "\"gps_hz\":" + String(status.gps_hz) + ",\n";
   newSettings += "\"min_sat_av\":" + String(status.min_sat_av) + ",\n";
@@ -266,6 +268,18 @@ void loadConfiguration(){
         writeConfiguration();
         delay(1000);
         ESP.restart();
+      }
+
+      if(status.jsonSettings.hasOwnProperty(String("wifi_ssid"))){
+        strcpy(charValue,status.jsonSettings["wifi_ssid"]);
+        strcpy(status.wifi_ssid,charValue);
+        log_i("WiFi ssid: %s",charValue);
+      }
+
+      if(status.jsonSettings.hasOwnProperty(String("wifi_psw"))){
+        strcpy(charValue,status.jsonSettings["wifi_psw"]);
+        strcpy(status.wifi_psw,charValue);
+        log_i("WiFi psw: %s",charValue);
       }
 
       if(status.jsonSettings.hasOwnProperty(String("gps_hz"))){
@@ -699,17 +713,32 @@ uint32_t interpolate(float vval, const char *field){
   uint32_t f2 = 0;
   bool minFound = false;
   bool maxFound = false;
+
+  // NOTE vval should be ordered from max to min eg. 10 m/s to -10 m/s
+
+  // check less than minimum return last minimum
+  if (vval < (double)status.jsonSettings["vario_curve"][s-1]["vval"]) {
+    return status.jsonSettings["vario_curve"][s-1][field];
+  }
+
+  // check greater than maximum return first maximum
+  if (vval > (double)status.jsonSettings["vario_curve"][0]["vval"]) {
+    return status.jsonSettings["vario_curve"][0][field];
+  }
+
+  // if in between values return interpolated value
   for (int i =0;i<s;i++){
     float v = (double)status.jsonSettings["vario_curve"][i]["vval"];
-    if (vval < v && !minFound){
-      v1 = v;
+    if (vval < v && !minFound){ 
+      v1 = v; 
       f1 = status.jsonSettings["vario_curve"][i][field];
     }else{ minFound = true;}
-    if (vval > v && !maxFound){
+    if (vval > v && !maxFound){ 
       v2 = v;
       f2 = status.jsonSettings["vario_curve"][i][field];
       maxFound = true;
     }
+    // if exact match return exact value
     if (v == vval){
       return status.jsonSettings["vario_curve"][i][field];
     }

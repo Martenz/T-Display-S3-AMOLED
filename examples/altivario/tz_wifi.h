@@ -23,8 +23,6 @@ extern struct statusData status;
 
 #include "altivario.h"
 
-#define TZWIFINETSSID "Vodafone-A41327011"
-#define TZWIFINETSSIDPSW "p2qEEmMGAGx429yY"
 #define TZWIFIAPSSID "Tz_S3OLED_AP"
 #define TZWIFIAPSSIDPSW NULL
 
@@ -44,5 +42,10 @@ void handle_OnUpdate();
 void handle_settings();
 void handle_NotFound();
 void HandleMyClients();
+
+#define js_script "var s_el = document.getElementById('settings');\
+var s = s_el.value;\
+var jsonPretty = JSON.stringify(JSON.parse(s),null,2);\
+s_el.value = jsonPretty;"
 
 #endif
