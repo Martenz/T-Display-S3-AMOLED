@@ -271,7 +271,8 @@ String SendHTML(bool update, String version){
         ptr += "<script>";
         ptr += "const u = document.getElementById('update');";
         ptr += "u.addEventListener('click',function(){u.innerHTML = 'Updating...';";
-        ptr += "alert('Wait unitl esp32 restarts with new firmware, then reconnect to wifi if needed.');";
+        ptr += "alert('Wait unitl esp32 restarts with new firmware, then reconnect to wifi if needed. ";
+        ptr += "Close this dialog to continue.');";
         ptr += "});</script>";
     }
   }else{
