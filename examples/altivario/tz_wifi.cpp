@@ -297,10 +297,42 @@ String SendHTML(bool update, String version){
 }
 
 void TzWifiBegin(){
-    // WIFI AP
 
     WiFi.mode(WIFI_AP_STA);
+
+    // WIFI Station
+
+    if (WiFi.begin(status.wifi_ssid, status.wifi_psw)){
+      log_i("[*] Connecting to WiFi Network");
+      uint32_t startTime = millis();
+      while(WiFi.status() != WL_CONNECTED)
+      {
+          log_i(".");
+          delay(500);
+          if (millis() - startTime > 10000){
+            log_i("Wifi Connection failed, wrong or missing ssid/password or network not available");
+            status.wifi_connected=false;
+            WiFi.disconnect(false,true);
+            break;
+          }
+
+      }
+
+      if (WiFi.status() == WL_CONNECTED){
+        status.wifi_connected = true;
+
+        log_i("[+] Connected to the WiFi network with local IP : %s", WiFi.localIP().toString().c_str());
+
+        // WIFI Station ---
+
+        lastTime = 0;
+      }
+    }
+
+    // WIFI AP
+
     log_i("[*] Creating ESP32 AP");
+    delay(50);
     WiFi.softAP(soft_ap_ssid, soft_ap_password);
     // WiFi.softAPConfig(local_ip, gateway, subnet);
     log_i("[+] AP Created with IP Gateway: %s", WiFi.softAPIP().toString().c_str());
@@ -316,34 +348,6 @@ void TzWifiBegin(){
     log_i("HTTP server started");
 
     // WIFI AP ---
-
-    // WIFI Station
-
-    WiFi.begin(status.wifi_ssid, status.wifi_psw);
-    log_i("[*] Connecting to WiFi Network");
-
-    uint32_t startTime = millis();
-    while(WiFi.status() != WL_CONNECTED)
-    {
-        log_i(".");
-        delay(500);
-        if (millis() - startTime > 10000){
-          log_i("Wifi Connection failed, wrong or missing ssid/password or network not available");
-          status.wifi_connected=false;
-          break;
-        }
-
-    }
-
-    if (WiFi.status() == WL_CONNECTED){
-      status.wifi_connected = true;
-
-      log_i("[+] Connected to the WiFi network with local IP : %s", WiFi.localIP().toString().c_str());
-
-      // WIFI Station ---
-
-      lastTime = 0;
-    }
 
 }
 

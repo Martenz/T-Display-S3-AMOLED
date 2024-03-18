@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <altivario.h>
+#include <SoftwareSerial.h>
+
 #include "melodies.h"
 
 #include "SPIFFS.h"
@@ -17,7 +19,6 @@
 #include <tz_wifi.h>
 
 #include <TinyGPS++.h>
-#include <SoftwareSerial.h>
 #include "ubloxConfigSentences.h"
 
 TinyGPSPlus gps;
@@ -118,6 +119,7 @@ static char* battery[7] = {
 struct statusData status;
 
 SoftwareSerial ss(GPSRXPIN, GPSTXPIN);
+
 bool nmeaReady = false;
 
 
