@@ -990,7 +990,8 @@ void taskOledUpdate(void *param)
 
 //        log_i("Elevation: %i - Vario: %i",el,vd);
 
-        if (status.lowPower || status.updating) break;
+        // if (status.lowPower || status.updating) break;
+        if (status.lowPower) break;
 
     }
 

@@ -166,7 +166,6 @@ void ui_begin()
     lv_obj_t *tv3 = lv_tileview_add_tile(dis, 0, 2, LV_DIR_VER);
     lv_obj_t *tv4 = lv_tileview_add_tile(dis, 0, 3, LV_DIR_VER);
 
-
     /* page 1 */
     /// https://lvgl.io/tools/imageconverter
     /// LV_IMG_CF_RAW_CHROMA_KEYED
@@ -481,6 +480,18 @@ void ui_begin()
     lv_obj_set_style_text_color(buss_text, UI_FONT_COLOR, 0);
 
     ui_toolbar_status(tv4);
+
+    /* Updating Message */
+    if (status.updating){
+        lv_obj_t *updating_text = lv_label_create(dis);
+        lv_obj_align(updating_text, LV_ALIGN_TOP_MID, 0, 0);
+        lv_obj_set_style_text_align(updating_text, LV_ALIGN_CENTER, 0);
+        lv_obj_set_style_text_font(updating_text, &lv_font_montserrat_28, 0);
+        lv_label_set_recolor(updating_text,true);
+        String udtg =  "UPDATING ..";
+        lv_label_set_text_fmt(updating_text, "#ff00ff UPDATING ..#");    
+        lv_obj_set_style_text_color(updating_text, UI_FONT_COLOR, 0);
+    }    
 
     // lv_obj_t *debug_label = lv_label_create(tv3);
     // String text;

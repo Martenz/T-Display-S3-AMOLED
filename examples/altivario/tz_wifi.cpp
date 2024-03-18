@@ -1,4 +1,5 @@
 #include "tz_wifi.h"
+#include "tzi_gui.h"
 
 // const char* wifi_network_ssid     = status.wifi_ssid;
 // const char* wifi_network_password =  status.wifi_psw;
@@ -157,6 +158,8 @@ void handle_OnUpdate(){
 
   // If file is reachable, start downloading
   if(httpResponseCode > 0){
+      status.updating = true;
+      ui_gotomain_page(status.mainpage);
       // get length of document (is -1 when Server sends no Content-Length header)
       totalLength = https.getSize();
       // transfer to local variable
