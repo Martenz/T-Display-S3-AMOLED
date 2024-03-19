@@ -131,7 +131,14 @@ void updateFirmware(uint8_t *data, size_t len){
   ESP.restart();
 }
 
+
 void handle_OnUpdate(){
+
+  ui_gotomain_page(status.mainpage);
+  const char *upd_msg = "UPDATING ..";
+  lv_msg_send(MSG_UPDATING_FW, &upd_msg);
+  delay(50);
+
   server.sendHeader("Location", "/",true);  
   server.send(302, "text/plain", ""); 
   setClock();
@@ -140,7 +147,7 @@ void handle_OnUpdate(){
   WiFiClientSecure client;// = new WiFiClientSecure;
   //HTTPClient http;
   HTTPClient https;
-    
+
   // Your Domain name with URL path or IP address with path
   // http.begin(client, serverName);
   // http.addHeader("accept", "application/json");
@@ -158,8 +165,6 @@ void handle_OnUpdate(){
 
   // If file is reachable, start downloading
   if(httpResponseCode > 0){
-      status.updating = true;
-      ui_gotomain_page(status.mainpage);
       // get length of document (is -1 when Server sends no Content-Length header)
       totalLength = https.getSize();
       // transfer to local variable
@@ -222,6 +227,7 @@ void handle_settings(){
   delay(100);
   loadConfiguration();
   updateUi();
+  TzWifiSTA_init();
 
   delay(100);
 
@@ -300,11 +306,8 @@ String SendHTML(bool update, String version){
   return ptr;
 }
 
-void TzWifiBegin(){
-
-    WiFi.mode(WIFI_AP_STA);
-
-    // WIFI Station
+void TzWifiSTA_init(){
+// WIFI Station
 
     if (WiFi.begin(status.wifi_ssid, status.wifi_psw)){
       log_i("[*] Connecting to WiFi Network");
@@ -327,11 +330,17 @@ void TzWifiBegin(){
 
         log_i("[+] Connected to the WiFi network with local IP : %s", WiFi.localIP().toString().c_str());
 
-        // WIFI Station ---
-
         lastTime = 0;
       }
     }
+    // WIFI Station ---
+}
+
+void TzWifiBegin(){
+
+    WiFi.mode(WIFI_AP_STA);
+
+    TzWifiSTA_init();
 
     // WIFI AP
 

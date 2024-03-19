@@ -41,6 +41,7 @@ extern struct statusData status;
 #define MSG_NEW_VARIO_M 16
 #define MSG_NEW_NESW 17
 #define MSG_NEW_NSAT 18
+#define MSG_UPDATING_FW 19
 
 #define LV_DELAY(x)                                                                                                                                  \
   do {                                                                                                                                               \

@@ -39,7 +39,7 @@ struct statusData{
     uint32_t chipId;
     uint16_t firmware_v = 0;
     bool updating = false;
-    uint8_t mainpage = 2;
+    uint8_t mainpage = 0;
     bool lowPower = false;
     
     bool ble_init = false;

@@ -161,6 +161,27 @@ void ui_begin()
     lv_obj_set_size(dis, LV_PCT(100), LV_PCT(100));
     lv_obj_remove_style(dis, 0, LV_PART_SCROLLBAR);
 
+    /* Updating Message */
+    // lv_obj_t *updating_text = lv_label_create(dis);
+    // lv_obj_align(updating_text, LV_ALIGN_TOP_MID, 0, 20);
+    // lv_obj_set_style_text_align(updating_text, LV_ALIGN_CENTER, 0);
+    // lv_obj_set_style_text_font(updating_text, &lv_font_montserrat_28, 0);
+    // lv_label_set_recolor(updating_text,true);
+    // String udtg =  "UPDATING ..";
+    // lv_label_set_text_fmt(updating_text, "#ff00ff UPDATING ..#");    
+    // lv_obj_set_style_text_color(updating_text, UI_FONT_COLOR, 0);
+
+    lv_obj_t *updating_text = lv_label_create(dis);
+    lv_obj_align(updating_text, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_set_style_text_font(updating_text, &lv_font_montserrat_28, 0);
+    lv_label_set_text(updating_text, "");
+    lv_obj_add_event_cb(updating_text,
+                        update_text_subscriber_cb,
+                        LV_EVENT_MSG_RECEIVED,
+                        NULL);
+    lv_msg_subsribe_obj(MSG_UPDATING_FW, updating_text, (void *)"%s");
+
+
     lv_obj_t *tv1 = lv_tileview_add_tile(dis, 0, 0, LV_DIR_VER);
     lv_obj_t *tv2 = lv_tileview_add_tile(dis, 0, 1, LV_DIR_VER);
     lv_obj_t *tv3 = lv_tileview_add_tile(dis, 0, 2, LV_DIR_VER);
@@ -480,18 +501,6 @@ void ui_begin()
     lv_obj_set_style_text_color(buss_text, UI_FONT_COLOR, 0);
 
     ui_toolbar_status(tv4);
-
-    /* Updating Message */
-    if (status.updating){
-        lv_obj_t *updating_text = lv_label_create(dis);
-        lv_obj_align(updating_text, LV_ALIGN_TOP_MID, 0, 0);
-        lv_obj_set_style_text_align(updating_text, LV_ALIGN_CENTER, 0);
-        lv_obj_set_style_text_font(updating_text, &lv_font_montserrat_28, 0);
-        lv_label_set_recolor(updating_text,true);
-        String udtg =  "UPDATING ..";
-        lv_label_set_text_fmt(updating_text, "#ff00ff UPDATING ..#");    
-        lv_obj_set_style_text_color(updating_text, UI_FONT_COLOR, 0);
-    }    
 
     // lv_obj_t *debug_label = lv_label_create(tv3);
     // String text;

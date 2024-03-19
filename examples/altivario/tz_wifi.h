@@ -35,6 +35,7 @@ String SendHTML(bool update, String version);
 
 void updateFirmware(uint8_t *data, size_t len);
 
+void TzWifiSTA_init();
 void TzWifiBegin();
 void TzWifiOff();
 void handle_OnConnect();

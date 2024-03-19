@@ -809,7 +809,8 @@ void taskBuzzer(void *pvParameters){
 
       delay(soff);
     }
-    if (status.lowPower || status.updating) break;
+    // if (status.lowPower || status.updating) break;
+    if (status.lowPower) break;
   }
 
   status.volume = 0;
@@ -932,7 +933,8 @@ void taskBaro(void *param)
 
     }
     
-    if (status.lowPower || status.updating) break;
+    // if (status.lowPower || status.updating) break;
+    if (status.lowPower) break;
     delay(10);
 
     }
@@ -1045,7 +1047,8 @@ void taskBluetooth(void *param) {
           }
         }
 
-      if (status.lowPower || status.updating) break;
+      // if (status.lowPower || status.updating) break;
+      if (status.lowPower) break;
       delay(50);
     };
 
@@ -1239,7 +1242,8 @@ void taskGPSU7(void *param){
       break;
     }
 
-    if (status.lowPower || status.updating) break;
+    // if (status.lowPower || status.updating) break;
+    if (status.lowPower) break;
     delay(10);
   }
 
