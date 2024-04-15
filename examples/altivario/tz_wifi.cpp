@@ -244,7 +244,7 @@ String SendHTML(bool update, String version){
   ptr +="<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n";
   ptr +="<title>TzInstruments</title>\n";
   ptr +="<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}\n";
-  ptr +="body{margin-top: 50px;} h1 {color: #444444;margin: 50px auto 30px;} h3 {color: #444444;margin-bottom: 50px;}\n";
+  ptr +="body{margin: auto;} h1 {color:white;margin:0;padding:1rem;background-color:rgb(42,142,242);} h3 {color: #444444;margin-bottom: 50px;}\n";
   ptr +=".button {display: block;background-color: #3498db;border: none;color: white;padding: 13px 30px;text-decoration: none;font-size: 25px;margin: 0px auto 35px;cursor: pointer;border-radius: 4px;}\n";
   ptr +=".button-on {background-color: #3498db;}\n";
   ptr +=".button-on:active {background-color: #2980b9;}\n";
@@ -289,7 +289,7 @@ String SendHTML(bool update, String version){
   // TODO test update settings from webserver
   ptr += "<div id='all-settings'></div>";
   ptr += "<form action='/settings' method='POST'><div>";
-  ptr += "<label for='settings'>Edit raw settings here below or paste from <a href='#'>Online Configurator</a></label>";
+  ptr += "<label for='settings'>Edit raw settings here below or paste from <a href='https://martenz.github.io/TzI-Configurator/' taget='_blank'>Online Configurator</a></label>";
   ptr += "<p><textarea id='settings' name='settings' rows='25' cols='50'>";
   String jsonsettings = JSON.stringify(status.jsonSettings);
   //jsonsettings.replace(",\"",",\n\"");
