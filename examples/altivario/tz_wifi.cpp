@@ -289,7 +289,7 @@ String SendHTML(bool update, String version){
   // TODO test update settings from webserver
   ptr += "<div id='all-settings'></div>";
   ptr += "<form action='/settings' method='POST'><div>";
-  ptr += "<label for='settings'>Edit raw settings here below or paste from <a href='https://martenz.github.io/TzI-Configurator/' taget='_blank'>Online Configurator</a></label>";
+  ptr += "<label for='settings'>Edit raw settings here below or paste from <a href='https://martenz.github.io/TzI-Configurator/' target='_blank'>Online Configurator</a></label>";
   ptr += "<p><textarea id='settings' name='settings' rows='25' cols='50'>";
   String jsonsettings = JSON.stringify(status.jsonSettings);
   //jsonsettings.replace(",\"",",\n\"");
