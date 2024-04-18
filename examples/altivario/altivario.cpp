@@ -121,9 +121,6 @@ struct statusData status;
 
 SoftwareSerial ss(GPSRXPIN, GPSTXPIN);
 
-bool nmeaReady = false;
-
-
 OneButton button1(PIN_BUTTON_1, true);
 OneButton button2(PIN_BUTTON_2, true);
 
@@ -661,9 +658,7 @@ void loop()
     // //strcat(sOut,"\r\n0");
     // status.LK8EX1_s = String(sOut);    
 
-    if (status.BLE_connected & gotomainpage){
-        ui_gotomain_page(status.mainpage);
-        gotomainpage = false;
+    if (status.BLE_connected){
         lv_msg_send(MSG_NEW_BLE, &bleon);
     }
     if (!status.BLE_connected){
@@ -1030,8 +1025,8 @@ void taskBluetooth(void *param) {
             if (status.NMEA_raw.length()>0 && status.nmeaReady)
               {
               BLESendChunks(status.NMEA_raw);
-//              log_i("BLE NMEA: %s",status.NMEA_raw.c_str());
-              Serial.println(status.NMEA_raw);
+              delay(5);
+              // log_i("BLE NMEA: %s",status.NMEA_raw.c_str());
               status.nmeaReady = false;
               }
           }else
@@ -1231,8 +1226,8 @@ void taskGPSU7(void *param){
               log_e("GPS: %s",readString.c_str());
             }else{
               status.NMEA_raw = readString;                
-              nmeaReady = true;
-              //log_e("GPS: %s",readString.c_str());
+              status.nmeaReady = true;
+              // log_e("GPS: %s",readString.c_str());
             }            
             //}//else{ble_data = "";}
               delay(1);
@@ -1244,7 +1239,7 @@ void taskGPSU7(void *param){
        
     if (millis() > 30000 && gps.charsProcessed() < 10)
     {
-      Serial.println(F("No GPS detected: check wiring."));  
+      //Serial.println(F("No GPS detected: check wiring."));  
       log_e("No GPS detected: check wiring.");
       break;
     }
