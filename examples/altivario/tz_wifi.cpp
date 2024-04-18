@@ -235,6 +235,13 @@ void handle_settings(){
   server.send(302, "text/plain", ""); 
 }
 
+void handle_restartGPS(){
+  status.restart_GPS = true;
+  delay(1000);
+  server.sendHeader("Location", "/",true);  
+  server.send(302, "text/plain", ""); 
+}
+
 void handle_NotFound(){
   server.send(404, "text/plain", "Not found");
 }
@@ -286,7 +293,7 @@ String SendHTML(bool update, String version){
     ptr += "please check WiFi SSID and PSW are correct or Network is available and retry.<br>";
     ptr += "You can edit SSID and PSW in setting here below.</p>";
   }
-  // TODO test update settings from webserver
+  // settings
   ptr += "<div id='all-settings'></div>";
   ptr += "<form action='/settings' method='POST'><div>";
   ptr += "<label for='settings'>Edit raw settings here below or paste from <a href='https://martenz.github.io/TzI-Configurator/' target='_blank'>Online Configurator</a></label>";
@@ -297,6 +304,9 @@ String SendHTML(bool update, String version){
   ptr += jsonsettings;
   ptr += "</textarea></p>";
   ptr += "<button id='update-settings'>Update Settings</button></div></form>";
+
+  // restart GPS
+  ptr += "<p style='padding:1rem;'><a class='button' href='/restartGPS'>Reset GPS</a></p>";
 
   ptr += "<script type='text/javascript'>";
   ptr += String(js_script);
@@ -353,6 +363,7 @@ void TzWifiBegin(){
     server.on("/", HTTP_GET, handle_OnConnect);
     server.on("/update", HTTP_GET, handle_OnUpdate);
     server.on("/settings", HTTP_POST, handle_settings);
+    server.on("/restartGPS", HTTP_GET, handle_restartGPS);
     server.onNotFound(handle_NotFound);
 
 //    server.on("/update", ...);

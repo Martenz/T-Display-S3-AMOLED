@@ -75,6 +75,7 @@ const char* bleon = "#ff00ff \xEF\x8a\x93#";
 const char* bleoff = "#4f0a4f \xEF\x8a\x93#";
 
 const char* gpsfix = "#ff00ff \xEF\x84\xA4#";
+const char* gpsfixgood = "#9DFF00 \xEF\x84\xA4#";
 const char* gpsnofix = "#4f0a4f \xEF\x84\xA4#";
 
 const char* pv = "#d5ff03 \xEF\x81\xA7#";
@@ -441,7 +442,7 @@ void setup()
     pinMode(GPSTXPIN,OUTPUT);
     ss.begin(GPSBAUD);
     delay(500);
-    resetUBX();
+//    resetUBX();
     changeGpsHz();
     setSentences();
     delay(50);
@@ -581,7 +582,7 @@ void loop()
         char* nb = battery[4];
         if (volt_avg>=uint32_t(4200)){
             nb = battery[6];
-        }else if (volt_avg>=uint32_t(4050)){
+        }else if (volt_avg>=uint32_t(4150)){
             nb = battery[5];
         }else if (volt_avg>=uint32_t(3900)){
             nb = battery[4];
@@ -971,7 +972,11 @@ void taskOledUpdate(void *param)
 
 
         if (status.GPS_Fix && status.GPS_sat >= status.min_sat_av){
-          lv_msg_send(MSG_NEW_GPSFIX, &gpsfix);
+          if (status.GPS_sat>7){
+            lv_msg_send(MSG_NEW_GPSFIX, &gpsfixgood);
+          }else{
+           lv_msg_send(MSG_NEW_GPSFIX, &gpsfix);
+          }
           int32_t el = +status.GPS_alt;
           lv_msg_send(MSG_NEW_ELEV, &el);
           char *course = status.GPS_course_c;
@@ -1083,8 +1088,12 @@ void sendUBX(const unsigned char *progmemBytes, size_t len )
 } // sendUBX
 
 void resetUBX(){
+   log_i("Reset Gps Ubx module");
     sendUBX( ubxReset, sizeof(ubxReset) );
     delay(500);
+    changeGpsHz();
+    setSentences();
+    delay(200);
 }
 
 void setSentences(){
@@ -1121,8 +1130,9 @@ void setSentences(){
     sendUBX( ubxDisableZDA, sizeof(ubxDisableZDA) );    
     delay(200);
 
-    sendUBX( ubxReset, sizeof(ubxReset) );
-    delay(500);
+  //  log_i("Reset Gps Ubx module");
+  //   sendUBX( ubxReset, sizeof(ubxReset) );
+  //   delay(500);
 }
 
 void changeGpsHz(){
@@ -1175,14 +1185,10 @@ void taskGPSU7(void *param){
 //   status.bussola = status.bussola +1 > 359 ? 0 : status.bussola + 1;
 
     if (status.restart_GPS){
-      // sendUBX( ubxReset, sizeof(ubxReset) );
-      // delay(500);
+      log_i("Restarting GPS module.");
       resetUBX();
       delay(500);
       status.restart_GPS = false;
-      //Serial.println("Restarting GPS module.");
-      log_i("Restarting GPS module.");
-      //delay(500);
     }
 
     if (status.resetGpsHz){
@@ -1226,6 +1232,7 @@ void taskGPSU7(void *param){
             }else{
               status.NMEA_raw = readString;                
               nmeaReady = true;
+              //log_e("GPS: %s",readString.c_str());
             }            
             //}//else{ble_data = "";}
               delay(1);
