@@ -1084,11 +1084,10 @@ void sendUBX(const unsigned char *progmemBytes, size_t len )
 
 void resetUBX(){
    log_i("Reset Gps Ubx module");
-    sendUBX( ubxReset, sizeof(ubxReset) );
-    delay(500);
     changeGpsHz();
     setSentences();
-    delay(200);
+    sendUBX( ubxReset, sizeof(ubxReset) );
+    delay(500);
 }
 
 void setSentences(){
@@ -1169,6 +1168,7 @@ void taskGPSU7(void *param){
     // Serial.println("Hz mode.");
     //changeGpsHz();
 //    Serial.flush();
+  resetUBX();
 
   String readString = "$";
 
@@ -1227,7 +1227,7 @@ void taskGPSU7(void *param){
             }else{
               status.NMEA_raw = readString;                
               status.nmeaReady = true;
-              // log_e("GPS: %s",readString.c_str());
+              //log_e("GPS: %s",readString.c_str());
             }            
             //}//else{ble_data = "";}
               delay(1);
